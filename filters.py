@@ -1,7 +1,7 @@
 import numpy as np
 import cv2 
 
-def strokeEdges(src : np.array,dest : np.array,blurKSize = 7,edgeKSize = 5):
+def strokeEdges(src : np.ndarray,dest : np.ndarray,blurKSize = 7,edgeKSize = 5):
     if blurKSize >= 3:
         blurredSrc =  cv2.medianBlur(src,blurKSize)
         graySrc = cv2.cvtColor(blurredSrc, cv2.COLOR_BGR2GRAY)
@@ -16,9 +16,10 @@ def strokeEdges(src : np.array,dest : np.array,blurKSize = 7,edgeKSize = 5):
 
 if __name__ == '__main__':     
    img = cv2.imread('./livia.jpg')
-   dest = np.ones(shape=img.shape)
+   print(type(img))
+   dest = np.zeros(shape=img.shape)
    strokeEdges(img,dest)
-   cv2.imshow('stroking edges',img)
+   cv2.imshow('stroking edges',dest)
    cv2.waitKey()
    cv2.destroyAllWindows()
     
