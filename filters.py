@@ -1,5 +1,42 @@
 import numpy as np
-import cv2 
+import cv2
+
+class VConvolutionFilter:
+
+    def __init__(self,kernel : np.ndarray):
+       self._kernel = kernel
+    def apply(self,src : np.ndarray,dest : np.ndarray):
+       #-1 = use the name per channel depth of the origin img
+       cv2.filter2D(src,-1,self._kernel, dest)
+
+class SharpenFilter(VConvolutionFilter):
+    def __init__(self):
+        kernel = np.array([
+             [-1,-1,-1],
+             [-1,9,-1],
+             [-1,-1,-1]
+            ])
+        VConvolutionFilter.__init__(self,kernel)
+
+class BlurFilter(VConvolutionFilter):
+    def __init__(self): 
+       kernel = np.array([
+                         [0.04,0.04,0.04,0.04,0.04],
+                         [0.04,0.04,0.04,0.04,0.04],
+                         [0.04,0.04,0.04,0.04,0.04],
+                         [0.04,0.04,0.04,0.04,0.04],
+                         [0.04,0.04,0.04,0.04,0.04]
+                         ])
+       VConvolutionFilter.__init__(self,kernel)
+
+class EmbossFilter(VConvolutionFilter):
+    def __init__(self):
+       kernel = np.array([
+       [-2,-1,0],
+       [-1,1,1],
+       [0,1,2]
+       ])  
+       VConvolutionFilter.__init__(self,kernel)
 
 def strokeEdges(src : np.ndarray,dest : np.ndarray,blurKSize = 7,edgeKSize = 5):
     if blurKSize >= 3:
@@ -16,10 +53,8 @@ def strokeEdges(src : np.ndarray,dest : np.ndarray,blurKSize = 7,edgeKSize = 5):
 
 if __name__ == '__main__':     
    img = cv2.imread('./livia.jpg')
-   print(type(img))
-   dest = np.zeros(shape=img.shape)
-   strokeEdges(img,dest)
-   cv2.imshow('stroking edges',dest)
+   strokeEdges(img,img)
+   cv2.imshow('strokeEdges filter teste',img)
    cv2.waitKey()
    cv2.destroyAllWindows()
     
