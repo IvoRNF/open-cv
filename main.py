@@ -7,6 +7,19 @@ class OpenCvTests:
 
   def __init__(self):
       pass
+      
+      
+  def showContours(self,img : np.ndarray): 
+    _ , thresh = cv2.threshold(img,127,255,0)
+    contours , hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    contourColor = (0,255,0)
+    contourSize = 3
+    contourIdx = -1
+    colorImg = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+    cv2.drawContours(colorImg,contours,contourIdx,contourColor,contourSize) 
+    cv2.imshow('Contor the square ',colorImg)
+    cv2.waitKey()
+    cv2.destroyAllWindows()        
 
   def convertPhoto(self,source_file_name : str,dest_file_name : str):
     img = cv2.imread(source_file_name)
@@ -38,8 +51,12 @@ class OpenCvTests:
        
 def main():
    openCv = OpenCvTests()
-   #openCv.displayImageOnWindow('livia.jpg')
-   #openCv.captureVideoCamera(10,'output_video2.avi')
+   img = np.zeros((200,200),dtype=np.uint8) 
+   squareWidth = 100
+   x,y = 50,50
+   img[x:x+squareWidth,y:y+squareWidth] = 255
+   img[10:25,10:25] = 255 
+   openCv.showContours(img)
 
 if __name__ == '__main__':
     main()
