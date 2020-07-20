@@ -8,7 +8,10 @@ class OpenCvTests:
   def __init__(self):
       pass
       
-      
+  
+  
+
+  
   def showContours(self,img : np.ndarray): 
     _ , thresh = cv2.threshold(img,127,255,0)
     contours , hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
@@ -47,16 +50,42 @@ class OpenCvTests:
      cv2.imshow(file_name,img)
      cv2.waitKey()
      cv2.destroyAllWindows()
-
+     
+  def showContours2(self,file_name : str): #desennhado os contornos manualmente
+    img = cv2.pyrDown(cv2.imread(file_name,cv2.IMREAD_UNCHANGED))
+    
+    #grayedImg = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    ret , thresh = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
+    
+    contours , hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    colored = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
+    #cv2.drawContours(colored,contours,1,(0,255,0),3)
+    
+    #for contour in contours: 
+    contour = contours[1]
+    #print('contour at idx 1 ',contour)
+    x,y,w,h = cv2.boundingRect(contour)
+    #print('convert to a rect', x,y,w,h)     
+    cv2.rectangle(colored,(x,y),(x+w,y+h),(0,255,0),2)
+    (x,y),radius = cv2.minEnclosingCircle(contour)
+    
+    center = (int(x),int(y))
+    radius = int(radius)
+    cv2.circle(colored,center,radius,(0,0,255),2)
+    
+    cv2.imshow('',colored)
+    cv2.waitKey()
+    cv2.destroyAllWindows()
        
 def main():
    openCv = OpenCvTests()
-   img = np.zeros((200,200),dtype=np.uint8) 
-   squareWidth = 100
-   x,y = 50,50
-   img[x:x+squareWidth,y:y+squareWidth] = 255
-   img[10:25,10:25] = 255 
-   openCv.showContours(img)
+   # img = np.zeros((200,200),dtype=np.uint8) 
+   # squareWidth = 100
+   # x,y = 50,50
+   # img[x:x+squareWidth,y:y+squareWidth] = 255
+   # img[10:25,10:25] = 255 
+   # openCv.showContours(img)
+   openCv.showContours2('./yy.jpg')
 
 if __name__ == '__main__':
     main()
