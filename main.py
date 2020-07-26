@@ -69,34 +69,48 @@ class OpenCvTests:
      cv2.waitKey()
      cv2.destroyAllWindows()     
      
-  def showContours2(self,file_name : str): #desennhado os contornos manualmente
-    img = cv2.pyrDown(cv2.imread(file_name,cv2.IMREAD_UNCHANGED))
+  def removingBackground(self,file_name : str): #desennhado os contornos manualmente
+    originalImg = cv2.pyrDown(cv2.imread(file_name))
+    img = originalImg.copy()     
+    x = 40
+    y = 40
+    w = 385
+    h = 510
+    rect = (x,y,x+w,y+h)
+    mask = np.zeros(img.shape[:2],np.uint8)
+
+    bgdModel = np.zeros((1,65),np.float64)
+    fgdModel = np.zeros((1,65),np.float64)
+    cv2.grabCut(img,mask,rect,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
+     
+    mask2 = np.where((mask==cv2.GC_BGD)|(mask==cv2.GC_PR_BGD),0,1).astype(np.uint8)
+    img = img * mask2[:,:,np.newaxis]
+       
+    #newMask = cv2.pyrDown(cv2.imread('./banana-mask.jpg'))
+    #newMask = cv2.cvtColor(newMask,cv2.COLOR_BGR2GRAY)
+    #mask2[newMask==0] = 0
+    
+    #mask2, bgdModel, fgdModel = cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
+    #img = img * mask2[:,:,np.newaxis]
     
     img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    #img = cv2.Canny(img,10,20)
-    ret , thresholded = cv2.threshold(img,127,255,cv2.THRESH_BINARY)
+    thresh = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
+
+    contours , hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
+    contourColor = (0,255,0)
+    contourSize = 3
+    contourIdx = 1
+
+    cv2.drawContours(originalImg,contours,contourIdx,contourColor,contourSize) 
     
-    contours , hierarchy = cv2.findContours(thresholded,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    img = cv2.cvtColor(img,cv2.COLOR_GRAY2BGR)
-    cv2.drawContours(img,contours,-1,(0,255,0),1)
-    
-     
-    # contour = contours[1]   
-    # x,y,w,h = cv2.boundingRect(contour)    
-    # cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
-    # (x,y),radius = cv2.minEnclosingCircle(contour)
-    
-    # center = (int(x),int(y))
-    # radius = int(radius)
-    # cv2.circle(img,center,radius,(0,0,255),2)
-    
-    cv2.imshow('',img)
+    #cv2.rectangle(originalImg,(x,y),(w,h),(0,255,0),3)
+    cv2.imshow('',originalImg)
     cv2.waitKey()
     cv2.destroyAllWindows()
        
 def main():
    openCv = OpenCvTests()
-   openCv.roundingCircles('./planets.jpg')
+   openCv.removingBackground('./livro.jpg')
 
 if __name__ == '__main__':
     main()
