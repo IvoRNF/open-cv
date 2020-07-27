@@ -68,8 +68,34 @@ class OpenCvTests:
      cv2.imshow('Hough circles',planets)
      cv2.waitKey()
      cv2.destroyAllWindows()     
-     
-  def removingBackground(self,file_name : str): #desennhado os contornos manualmente
+  
+
+
+  def removingBackgroundWathershed(self, file_name : str): 
+    img = cv2.pyrDown(  cv2.imread(file_name) )
+    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    ret , thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
+    #remove the noise 
+    kernel = np.ones((3,3),np.uint8)
+    opening = cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel, iterations=2)
+    #find the background
+    sure_bg = cv2.dilate(opening,kernel,iterations=3)
+    #find the foreground
+    dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,5)
+    ret , sure_fg = cv2.threshold(dist_transform, 0.7*dist_transform.max(),255,0)
+    sure_fg = sure_fg.astype(np.uint8)
+    #find the unknown region
+    unknown = cv2.subtract(sure_bg,sure_fg)
+    ret,markers = cv2.connectedComponents(sure_fg)
+    markers += 1
+    markers[unknown==255]=0
+    markers = cv2.watershed(img,markers)
+    img[markers==-1]=[255,0,0]
+    cv2.imshow(file_name , img)   
+    cv2.waitKey()
+    cv2.destroyAllWindows()
+    
+  def removingBackgroundAndContour(self,file_name : str): #desennhado os contornos manualmente
     originalImg = cv2.pyrDown(cv2.imread(file_name))
     img = originalImg.copy()     
     x = 40
@@ -85,14 +111,7 @@ class OpenCvTests:
      
     mask2 = np.where((mask==cv2.GC_BGD)|(mask==cv2.GC_PR_BGD),0,1).astype(np.uint8)
     img = img * mask2[:,:,np.newaxis]
-       
-    #newMask = cv2.pyrDown(cv2.imread('./banana-mask.jpg'))
-    #newMask = cv2.cvtColor(newMask,cv2.COLOR_BGR2GRAY)
-    #mask2[newMask==0] = 0
-    
-    #mask2, bgdModel, fgdModel = cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
-    #img = img * mask2[:,:,np.newaxis]
-    
+           
     img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     thresh = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
 
@@ -110,8 +129,8 @@ class OpenCvTests:
        
 def main():
    openCv = OpenCvTests()
-   openCv.removingBackground('./livro.jpg')
-
+   openCv.removingBackgroundAndContour('./livro.jpg')
+   #openCv.removingBackgroundWathershed('./livro.jpg')#'./banana.jpg') 
 if __name__ == '__main__':
     main()
 
