@@ -127,20 +127,21 @@ class OpenCvTests:
     cv2.waitKey()
     cv2.destroyAllWindows()
     
-  def detectingFaces(self,file_name : str): 
+  def detectingFaces(self): 
     classifier = cv2.CascadeClassifier('./haarcascade_frontalface_default.xml')
-    img = cv2.pyrDown( cv2.imread(file_name) )
-    grayed = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    faces = classifier.detectMultiScale(grayed,1.08,5,minSize=(200,200))    
-    for (x,y,w,h) in faces: 
-       img = cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
-    cv2.namedWindow(file_name)
-    cv2.imshow(file_name,img)
-    cv2.waitKey(0)
+    cam= cv2.VideoCapture(0)
+    while (cv2.waitKey(1)==-1):
+        success ,frame = cam.read()
+        if success:    
+           grayed = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+           faces = classifier.detectMultiScale(grayed,1.08,5,minSize=(100,100),maxSize=(300,300))    
+           for (x,y,w,h) in faces: 
+              frame = cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+           cv2.imshow('',frame)    
     cv2.destroyAllWindows()    
 def main():
    openCv = OpenCvTests()
-   openCv.detectingFaces('./livia.jpg')
+   openCv.detectingFaces()
    #openCv.removingBackgroundAndContour('./livro.jpg') 
 if __name__ == '__main__':
     main()
