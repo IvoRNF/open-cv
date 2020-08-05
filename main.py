@@ -49,7 +49,7 @@ class OpenCvTests:
         numFramesRemaining -= 1
         
   def displayImageOnWindow(self, file_name : str):
-     img = cv2.imread(file_name)
+     img = cv2.pyrDown( cv2.imread(file_name) )
      print(type(img))
      print(img.dtype)
      cv2.imshow(file_name,img)
@@ -138,11 +138,22 @@ class OpenCvTests:
            for (x,y,w,h) in faces: 
               frame = cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
            cv2.imshow('',frame)    
-    cv2.destroyAllWindows()    
+    cv2.destroyAllWindows()   
+  def HarrisFeatureDetection(self,file_name : str):
+    img = cv2.pyrDown( cv2.imread(file_name) )
+    grayed = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    grayed = np.float32(grayed)
+    dest = cv2.cornerHarris(grayed,5,3,0.04)
+    img[dest>0.01*dest.max()]=[0,255,0]
+    cv2.imshow(file_name,img)
+    cv2.waitKey()
+    cv2.destroyAllWindows()  
 def main():
    openCv = OpenCvTests()
-   openCv.detectingFaces()
+   openCv.HarrisFeatureDetection('./livro.jpg')
+   #openCv.detectingFaces()
    #openCv.removingBackgroundAndContour('./livro.jpg') 
+   
 if __name__ == '__main__':
     main()
 
