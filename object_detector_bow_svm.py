@@ -16,12 +16,17 @@ class Traineer:
       self.bow_extractor = cv2.BOWImgDescriptorExtractor(self.sift,self.flann)
       
    def load_pictures_to_bow(self):
+      self.files = {}
       dirToWalk = r'.\datasets\5857_1166105_bundle_archive\fruits-360\Test'
       for root,dirs,files in os.walk(dirToWalk):
           for name in files:
             basename = os.path.basename(root)
-            print('the file %s is a sample of type %s' % (name , basename))
-          
+            if not (basename in self.files):
+              self.files[basename] = []
+            files_per_class = self.files[basename]
+            files_per_class.append(name)#os.path.join(root,name))
+            #print('the file %s is a sample of type %s' % (name , basename))
+      print( len(self.files) )    
 if __name__ == '__main__':
    trainner = Traineer()    
    trainner.load_pictures_to_bow()    
