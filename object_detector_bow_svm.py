@@ -1,21 +1,32 @@
 import cv2
 import numpy as np
+import os
 
-BOW_NUM_TRAINING_SAMPLES_PER_CLASS = 10 
-SVM_NUM_TRAINING_SAMPLES_PER_CLASS = 100 
+class Traineer:
 
-
-sift = cv2.xfeatures2d.SIFT_create()
-
-FLANN_INDEX_KDTREE = 1
-
-flann = cv2.FlannBasedMatcher(
-        dict(algorithm=FLANN_INDEX_KDTREE,trees=5),{})
-
-num_clusters = 40
-bow_kmeans_trainer = cv2.BOWKMeansTrainer( num_clusters )
-
-bow_extractor = cv2.BOWImgDescriptorExtractor(sift,flann)
+   def __init__(self):
+      #self.BOW_NUM_TRAINING_SAMPLES_PER_CLASS = 150 
+      #self.SVM_NUM_TRAINING_SAMPLES_PER_CLASS = self.BOW_NUM_TRAINING_SAMPLES_PER_CLASS*100      
+      self.sift = cv2.xfeatures2d.SIFT_create()
+      self.FLANN_INDEX_KDTREE = 1
+      self.flann = cv2.FlannBasedMatcher(
+        dict(algorithm=self.FLANN_INDEX_KDTREE,trees=5),{})
+      num_clusters = 40
+      self.bow_kmeans_trainer = cv2.BOWKMeansTrainer( num_clusters )  
+      self.bow_extractor = cv2.BOWImgDescriptorExtractor(self.sift,self.flann)
+      
+   def load_pictures_to_bow(self):
+      dirToWalk = r'.\datasets\5857_1166105_bundle_archive\fruits-360\Test'
+      for root,dirs,files in os.walk(dirToWalk):
+          for name in files:
+            basename = os.path.basename(root)
+            print('the file %s is a sample of type %s' % (name , basename))
+          
+if __name__ == '__main__':
+   trainner = Traineer()    
+   trainner.load_pictures_to_bow()    
+     
+'''
 
 def add_sample(path):
  img = cv2.imread(path, cv2.IMREAD_GRAYSCALE)
@@ -82,8 +93,7 @@ for test_img_path in ['CarData/TestImages/test-0.pgm',
          color, 2, cv2.LINE_AA)
      cv2.imshow(test_img_path, img)
 cv2.waitKey(0)     
-     
-     
+'''     
      
 
 
