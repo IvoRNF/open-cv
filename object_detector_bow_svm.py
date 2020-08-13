@@ -4,9 +4,7 @@ import os
 
 class Traineer:
 
-   def __init__(self):
-      #self.BOW_NUM_TRAINING_SAMPLES_PER_CLASS = 150 
-      #self.SVM_NUM_TRAINING_SAMPLES_PER_CLASS = self.BOW_NUM_TRAINING_SAMPLES_PER_CLASS*100      
+   def __init__(self):    
       self.sift = cv2.xfeatures2d.SIFT_create()
       self.FLANN_INDEX_KDTREE = 1
       self.flann = cv2.FlannBasedMatcher(
@@ -14,22 +12,37 @@ class Traineer:
       num_clusters = 40
       self.bow_kmeans_trainer = cv2.BOWKMeansTrainer( num_clusters )  
       self.bow_extractor = cv2.BOWImgDescriptorExtractor(self.sift,self.flann)
+      self.files = []
+      self.dirToWalk = r'.\datasets\5857_1166105_bundle_archive\fruits-360\Test'   
+   def files_contains_class_name_index_of(self, name : str):
+       i = 0
+       for f in self.files:
+           row = self.files[i]
+           if name == row['class_name']:
+               return i
+           i += 1    
+       return -1        
+   def load_files(self):     
       
-   def load_pictures_to_bow(self):
-      self.files = {}
-      dirToWalk = r'.\datasets\5857_1166105_bundle_archive\fruits-360\Test'
-      for root,dirs,files in os.walk(dirToWalk):
+      i = 0
+      for root,dirs,files in os.walk(self.dirToWalk):
           for name in files:
             basename = os.path.basename(root)
-            if not (basename in self.files):
-              self.files[basename] = []
-            files_per_class = self.files[basename]
-            files_per_class.append(name)#os.path.join(root,name))
-            #print('the file %s is a sample of type %s' % (name , basename))
-      print( len(self.files) )    
+            y = self.files_contains_class_name_index_of(basename)
+            if (y == -1):
+              y = len(self.files) 
+              i += 1   
+              self.files.append({"index":i,"dirs_per_class":[],"class_name":basename})
+            row = self.files[y]
+            files_per_class = row["dirs_per_class"]
+            files_per_class.append(name)
+
+   def fill_bow(self):
+       print( len(self.files) )             
 if __name__ == '__main__':
    trainner = Traineer()    
-   trainner.load_pictures_to_bow()    
+   trainner.load_files() 
+   trainner.fill_bow()   
      
 '''
 
