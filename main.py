@@ -152,7 +152,7 @@ class OpenCvTests:
 
     captured,frame = capture.read()
     x,y,w,h = track_window
-    roi = frame[x:w,y:h]
+    roi = frame[y:y+h,x:x+w]
     hsv_roi = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv_roi, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
     roi_hist = cv2.calcHist([hsv_roi],[0],mask,[180],[0,180])
@@ -180,21 +180,36 @@ class OpenCvTests:
 
   def backgroundSubtractor(self):
     capture = cv2.VideoCapture(0)
-    fgbg = cv2.createBackgroundSubtractorMOG2()
-    while(True):
-      captured,frame = capture.read()
-      fgmsk = fgbg.apply(frame)
-      cv2.imshow('MOG BGR Subtractor',fgmsk)
+    bkSubtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
+    erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
+    dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,7))
+    captured,frame = capture.read()
+    while(captured):
+      fgmsk = bkSubtractor.apply(frame)
+      _,thresh = cv2.threshold(fgmsk,244,255,cv2.THRESH_BINARY)
+      cv2.erode(thresh, erode_kernel,thresh,iterations=2)
+      cv2.dilate(thresh, dilate_kernel,thresh,iterations=2)
+      contours, hierarchy = cv2.findContours(thresh , cv2.RETR_EXTERNAL,
+                                             cv2.CHAIN_APPROX_SIMPLE)
+      if(len(contours)>0):  
+        biggest_contour = contours[0]
+        for contour in contours:
+            if cv2.contourArea(contour) > cv2.contourArea(biggest_contour):
+                biggest_contour = contour
+        x,y,w,h = cv2.boundingRect(biggest_contour)
+        cv2.rectangle(frame,(x,y),(x+w,y+h),(255,255,0),2)
+      cv2.imshow('MOG BGR Subtractor',frame)
       k = cv2.waitKey(30)
       if k == 27:
         break
+      captured,frame = capture.read()
     capture.release()
     cv2.destroyAllWindows()
       
 def main():
    openCv = OpenCvTests()
-   #openCv.backgroundSubtractor()
-   openCv.trackObject((180,100,350,300))
+   openCv.backgroundSubtractor()
+   #openCv.trackObject((180,100,400,400))
    #openCv.HarrisFeatureDetection('./livro.jpg')
    #openCv.detectingFaces()
    #openCv.removingBackgroundAndContour('./banana100X100.jpg',(10,25,80,80)) 
