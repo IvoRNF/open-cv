@@ -146,43 +146,49 @@ class OpenCvTests:
     cv2.waitKey()
     cv2.destroyAllWindows()
 
-  def trackObject(self,rect):
-    track_window = rect
+  def trackObject(self):
+    
     capture = cv2.VideoCapture(0)
+    for i in range(10):
+      captured,frame = capture.read()
+    frame_h, frame_w = frame.shape[:2]
 
-    captured,frame = capture.read()
-    x,y,w,h = track_window
+    w = frame_w//8
+    h = frame_h//8
+    x = frame_w//2 - w//2
+    y = frame_h//2 - h//2
+    track_window = (x,y,w,h)
     roi = frame[y:y+h,x:x+w]
     hsv_roi = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
-    mask = cv2.inRange(hsv_roi, np.array((0., 60.,32.)), np.array((180.,255.,255.)))
+    mask = None
     roi_hist = cv2.calcHist([hsv_roi],[0],mask,[180],[0,180])
     cv2.normalize(roi_hist,roi_hist,0,255,cv2.NORM_MINMAX)
     term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
+    captured,frame = capture.read()
     while(True):
-      captured,frame = capture.read()
       if not captured:
         break
       hsv = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
       dst = cv2.calcBackProject([hsv],[0],roi_hist,[0,180],1)
-      captured, track_window = cv2.CamShift(dst, track_window, term_crit)
-      if not captured:
+      rotated_rect, track_window = cv2.CamShift(dst, track_window, term_crit)
+      if not rotated_rect:
         break
-      pts = cv2.boxPoints(captured)
-      pts = np.int0(pts)
-      img2 = cv2.polylines(frame,[pts],True, 255,2)
-      cv2.rectangle(img2,(x,y),(w,h),(0,255,0),1)
-      cv2.imshow('cam shift',img2)
+      box_points = cv2.boxPoints(rotated_rect)
+      box_points = np.int0(box_points)
+      cv2.polylines(frame,[box_points],True,(0,255,0),2)
+      cv2.imshow('cam shift',frame)
       k = cv2.waitKey(1)
       if k == 27:
         break
+      captured,frame = capture.read()  
     cv2.destroyAllWindows()
     capture.release()
 
   def backgroundSubtractor(self):
     capture = cv2.VideoCapture(0)
-    bkSubtractor = cv2.createBackgroundSubtractorMOG2(detectShadows=False)
-    erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(3,3))
-    dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,7))
+    bkSubtractor = cv2.createBackgroundSubtractorKNN(detectShadows=False)
+    erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,5))
+    dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(17,11))
     captured,frame = capture.read()
     while(captured):
       fgmsk = bkSubtractor.apply(frame)
@@ -205,11 +211,58 @@ class OpenCvTests:
       captured,frame = capture.read()
     capture.release()
     cv2.destroyAllWindows()
-      
+
+
+
+  def mouse_move(self,event,x,y,flags,param):
+      measure = np.array([[x],[y]],np.float32)
+      if self.last_measure is None:
+        self.kalman.statePre = np.array([[x],[y],[0],[0]],np.float32)
+        self.kalman.statePost = np.array([[x],[y],[0],[0]],np.float32)
+        prediction = measure
+      else:
+        self.kalman.correct(measure)  
+        prediction = self.kalman.predict()
+        cv2.line(self.img, (int(self.last_measure[0]), int(self.last_measure[1])),
+         (int(measure[0]), int(measure[1])), (0, 255, 0))
+        cv2.line(self.img, (int(self.last_prediction[0]), int(self.last_prediction[1])),
+        (int(prediction[0]), int(prediction[1])), (0, 0, 255))   
+      self.last_prediction = prediction.copy()
+      self.last_measure = measure
+
+  def trackingMouseWithKalman(self):
+    self.img = np.zeros((800, 800, 3), np.uint8) 
+    self.kalman = cv2.KalmanFilter(4,2)
+    self.kalman.measurementMatrix = np.array(
+                                        [[1, 0, 0, 0],
+                                        [0, 1, 0, 0]], np.float32)
+    self.kalman.transitionMatrix = np.array(
+                                        [[1, 0, 1, 0],
+                                        [0, 1, 0, 1],
+                                        [0, 0, 1, 0],
+                                        [0, 0, 0, 1]], np.float32)
+    self.kalman.processNoiseCov = np.array(
+                                        [[1, 0, 0, 0],
+                                        [0, 1, 0, 0],
+                                        [0, 0, 1, 0],
+                                        [0, 0, 0, 1]], np.float32) * 0.03 
+
+    self.last_measure = None 
+    self.last_prediction = None 
+    name = 'kalman_tracker'
+    cv2.namedWindow(name)
+    cv2.setMouseCallback(name,self.mouse_move)
+    while(True):
+      cv2.imshow(name,self.img)
+      k = cv2.waitKey(1)
+      if k == 27:
+        break
+    cv2.destroyAllWindows()
 def main():
    openCv = OpenCvTests()
    openCv.backgroundSubtractor()
-   #openCv.trackObject((180,100,400,400))
+   #openCv.trackingMouseWithKalman()
+   #openCv.trackObject()
    #openCv.HarrisFeatureDetection('./livro.jpg')
    #openCv.detectingFaces()
    #openCv.removingBackgroundAndContour('./banana100X100.jpg',(10,25,80,80)) 
