@@ -60,15 +60,15 @@ class Traineer:
                 self.training_data.extend(descriptors)
                 self.training_labels.append(row['index'])
    def train(self):
-      self.svm = cv2.ml.SVM_create()
-      '''if(os.path.exists('./fruits_svm.xml')):
-         self.svm.load('./fruits_svm.xml')
+      if(os.path.exists('./fruits_svm.xml')):
+         self.svm = cv2.ml.SVM_load('./fruits_svm.xml')
          print('loaded SVM from file')
-      else:  ''' 
-      self.svm.train(np.array(self.training_data), cv2.ml.ROW_SAMPLE,
+      else:
+        self.svm = cv2.ml.SVM_create() 
+        self.svm.train(np.array(self.training_data), cv2.ml.ROW_SAMPLE,
             np.array(self.training_labels))
-      #self.svm.save('./fruits_svm.xml')
-      #print('saved SVM to file')
+        self.svm.save('./fruits_svm.xml')
+        print('saved SVM to file')
    def run(self):
       self.load_files()
       self.fill_bow()
