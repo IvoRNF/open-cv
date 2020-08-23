@@ -94,36 +94,7 @@ class OpenCvTests:
     cv2.imshow(file_name , img)   
     cv2.waitKey()
     cv2.destroyAllWindows()
-    
-  def removingBackgroundAndContour(self,file_name : str,rect): #desennhado os contornos manualmente
-    originalImg = cv2.imread(file_name)
-    img = originalImg.copy()     
-    x,y,w,h = rect
-    rect = (x,y,x+w,y+h)
-    mask = np.zeros(img.shape[:2],np.uint8)
-
-    bgdModel = np.zeros((1,65),np.float64)
-    fgdModel = np.zeros((1,65),np.float64)
-    cv2.grabCut(img,mask,rect,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
-     
-    mask2 = np.where((mask==cv2.GC_BGD)|(mask==cv2.GC_PR_BGD),0,1).astype(np.uint8)
-    img = img * mask2[:,:,np.newaxis]
-           
-    img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    thresh = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
-
-    contours , hierarchy = cv2.findContours(thresh,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
-    contourColor = (0,255,0)
-    contourSize = 1
-    contourIdx = 0
-
-    cv2.drawContours(originalImg,contours,contourIdx,contourColor,contourSize) 
-    
-    #cv2.rectangle(originalImg,(x,y),(w,h),(0,255,0),1)
-    cv2.imshow('',originalImg)
-    cv2.waitKey()
-    cv2.destroyAllWindows()
-    
+      
   def detectingFaces(self): 
     classifier = cv2.CascadeClassifier('./haarcascade_frontalface_default.xml')
     cam= cv2.VideoCapture(0)
@@ -153,14 +124,14 @@ class OpenCvTests:
       captured,frame = capture.read()
     frame_h, frame_w = frame.shape[:2]
 
-    w = frame_w//8
-    h = frame_h//8
+    w = frame_w//2
+    h = frame_h//2
     x = frame_w//2 - w//2
     y = frame_h//2 - h//2
     track_window = (x,y,w,h)
     roi = frame[y:y+h,x:x+w]
     hsv_roi = cv2.cvtColor(frame,cv2.COLOR_BGR2HSV)
-    mask = None
+    mask = cv2.inRange(hsv_roi, np.array((0., 60.,32.)), np.array((180.,255.,255.)) ) #works well for faces only
     roi_hist = cv2.calcHist([hsv_roi],[0],mask,[180],[0,180])
     cv2.normalize(roi_hist,roi_hist,0,255,cv2.NORM_MINMAX)
     term_crit = ( cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 1 )
@@ -176,6 +147,7 @@ class OpenCvTests:
       box_points = cv2.boxPoints(rotated_rect)
       box_points = np.int0(box_points)
       cv2.polylines(frame,[box_points],True,(0,255,0),2)
+      cv2.rectangle(frame,(x,y),(x+w,y+h),(255,0,0),2)
       cv2.imshow('cam shift',frame)
       k = cv2.waitKey(1)
       if k == 27:
@@ -202,8 +174,8 @@ class OpenCvTests:
         for contour in contours:
             if cv2.contourArea(contour) > cv2.contourArea(biggest_contour):
                 biggest_contour = contour
-        x,y,w,h = cv2.boundingRect(biggest_contour)
-        cv2.rectangle(frame,(x,y),(x+w,y+h),(255,255,0),2)
+      x,y,w,h = cv2.boundingRect(biggest_contour)
+      cv2.rectangle(frame,(x,y),(x+w,y+h),(255,255,0),2)
       cv2.imshow('MOG BGR Subtractor',frame)
       k = cv2.waitKey(30)
       if k == 27:
@@ -256,11 +228,44 @@ class OpenCvTests:
       cv2.imshow(name,self.img)
       k = cv2.waitKey(1)
       if k == 27:
-        break
+        break 
     cv2.destroyAllWindows()
+  def removingBackground(self,img : np.ndarray,rect,backgroundColor,draw_rect = False):   
+    x,y,w,h = rect
+    rect = (x,y,x+w,y+h)
+    mask = np.zeros(img.shape[:2],np.uint8)
+    bgdModel = np.zeros((1,65),np.float64)
+    fgdModel = np.zeros((1,65),np.float64)
+    cv2.grabCut(img,mask,rect,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
+    for i in range( mask.shape[1] ):
+      for j in range( mask.shape[0] ):
+       if ((i > (x+w)) or (j > (y+h))): #out of roi rect
+         mask[i][j] = cv2.GC_BGD  
+    cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
+    for i in range( mask.shape[1] ):
+      for j in range( mask.shape[0] ):
+        if ( (mask[i][j] == cv2.GC_BGD) or ( mask[i][j] == cv2.GC_PR_BGD) ):
+         img[i][j] = backgroundColor  
+    if draw_rect:
+     cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
+    return img  
 def main():
    openCv = OpenCvTests()
-   openCv.backgroundSubtractor()
+   #openCv.backgroundSubtractor()
+   img = cv2.imread('./maca.jpeg')
+   img = cv2.resize(img,(100,100))
+   h,w = img.shape[:2]
+   x = 20
+   y = h//2 - 15
+   w = w //2
+   h = h//2 - 10
+   img = openCv.removingBackground(img,(x,y,w,h),[255,255,255])
+   while (True):
+     cv2.imshow('',img)
+     k = cv2.waitKey(1)
+     if k == 27:
+       break
+   cv2.destroyAllWindows()
    #openCv.trackingMouseWithKalman()
    #openCv.trackObject()
    #openCv.HarrisFeatureDetection('./livro.jpg')
