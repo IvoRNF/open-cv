@@ -248,23 +248,32 @@ class OpenCvTests:
          img[i][j] = backgroundColor  
     if draw_rect:
      cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
-    return img  
+    return img
+  def img_optimized(self,img_ : np.ndarray):
+    img = img_.copy()
+    img = cv2.resize(img,(100,100))
+    h,w = img.shape[:2]
+    x = 20
+    y = h//2 - 15
+    w = w //2
+    h = h//2 - 10
+    img = self.removingBackground(img,(x,y,w,h),[255,255,255])
+    roi = img[y:y+h,x:x+w]
+    resized_roi = cv2.resize(roi,(100,100))
+    return img resized_roi
+    
 def main():
    openCv = OpenCvTests()
    #openCv.backgroundSubtractor()
    img = cv2.imread('./maca.jpeg')
-   img = cv2.resize(img,(100,100))
-   h,w = img.shape[:2]
-   x = 20
-   y = h//2 - 15
-   w = w //2
-   h = h//2 - 10
-   img = openCv.removingBackground(img,(x,y,w,h),[255,255,255])
+   img = openCv.img_optimized(img)
    while (True):
      cv2.imshow('',img)
      k = cv2.waitKey(1)
      if k == 27:
        break
+     if k == ord('s'):
+       cv2.imwrite('./maca100100.jpg',img)
    cv2.destroyAllWindows()
    #openCv.trackingMouseWithKalman()
    #openCv.trackObject()

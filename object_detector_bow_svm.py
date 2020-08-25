@@ -4,7 +4,8 @@ import os
 
 class Traineer:
 
-   def __init__(self):    
+   def __init__(self):
+      self.is_test = os.path.exists('./fruits_svm.xml')
       self.sift = cv2.xfeatures2d.SIFT_create()
       self.FLANN_INDEX_KDTREE = 1
       self.flann = cv2.FlannBasedMatcher(
@@ -41,7 +42,7 @@ class Traineer:
 
    def fill_bow(self):
        for row in self.files:
-          for file_name in row['imgs_per_class'][0:15]: 
+          for file_name in row['imgs_per_class']: 
              img = cv2.imread(file_name,cv2.IMREAD_GRAYSCALE)
              keypoints, descriptors = self.sift.detectAndCompute(img, None)
              if descriptors is not None:
@@ -52,15 +53,17 @@ class Traineer:
        features = self.sift.detect(img)
        return self.bow_extractor.compute(img, features)
    def separate_training_data(self):
+     if self.is_test:
+        return
      for row in self.files:
-          for file_name in row['imgs_per_class'][0:15]:
+          for file_name in row['imgs_per_class']:
              img = cv2.imread(file_name, cv2.IMREAD_GRAYSCALE)
              descriptors = self.extract_bow_descriptors(img)
              if descriptors is not None:
                 self.training_data.extend(descriptors)
                 self.training_labels.append(row['index'])
-   def train(self):
-      if(os.path.exists('./fruits_svm.xml')):
+   def train_or_load(self):
+      if(self.is_test):
          self.svm = cv2.ml.SVM_load('./fruits_svm.xml')
          print('loaded SVM from file')
       else:
@@ -73,12 +76,12 @@ class Traineer:
       self.load_files()
       self.fill_bow()
       self.separate_training_data()
-      self.train()
+      self.train_or_load()
    def get_label_name(self,index : int):
         return self.files[index]['class_name']
       
    def test(self):
-      img = cv2.imread('./carambola.jpg')
+      img = cv2.imread('./maca100100.jpg')
       gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
       descriptors = self.extract_bow_descriptors(gray_img)
       prediction = self.svm.predict(descriptors)
