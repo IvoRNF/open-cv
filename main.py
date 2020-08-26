@@ -242,10 +242,7 @@ class OpenCvTests:
        if ((i > (x+w)) or (j > (y+h))): #out of roi rect
          mask[i][j] = cv2.GC_BGD  
     cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
-    for i in range( mask.shape[1] ):
-      for j in range( mask.shape[0] ):
-        if ( (mask[i][j] == cv2.GC_BGD) or ( mask[i][j] == cv2.GC_PR_BGD) ):
-         img[i][j] = backgroundColor  
+    img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor    
     if draw_rect:
      cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
     return img
@@ -260,7 +257,7 @@ class OpenCvTests:
     img = self.removingBackground(img,(x,y,w,h),[255,255,255])
     roi = img[y:y+h,x:x+w]
     resized_roi = cv2.resize(roi,(100,100))
-    return img resized_roi
+    return resized_roi
     
 def main():
    openCv = OpenCvTests()
