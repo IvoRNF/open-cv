@@ -1,6 +1,6 @@
 import numpy as np 
 import cv2
-
+import os
 
 
 class OpenCvTests:
@@ -233,6 +233,10 @@ class OpenCvTests:
   def removingBackground(self,img : np.ndarray,rect,backgroundColor,draw_rect = False):   
     x,y,w,h = rect
     rect = (x,y,x+w,y+h)
+        
+    if draw_rect:
+     cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
+     return
     mask = np.zeros(img.shape[:2],np.uint8)
     bgdModel = np.zeros((1,65),np.float64)
     fgdModel = np.zeros((1,65),np.float64)
@@ -240,12 +244,11 @@ class OpenCvTests:
     for i in range( mask.shape[1] ):
       for j in range( mask.shape[0] ):
        if ((i > (x+w)) or (j > (y+h))): #out of roi rect
-         mask[i][j] = cv2.GC_BGD  
+         mask[i][j] = cv2.GC_BGD
     cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
-    img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor    
-    if draw_rect:
-     cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
-    return img
+    img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor
+      
+
   def img_optimized(self,img_ : np.ndarray):
     img = img_.copy()
     img = cv2.resize(img,(100,100))
@@ -254,7 +257,7 @@ class OpenCvTests:
     y = h//2 - 15
     w = w //2
     h = h//2 - 10
-    img = self.removingBackground(img,(x,y,w,h),[255,255,255])
+    self.removingBackground(img,(x,y,w,h),[0,0,0],True)
     roi = img[y:y+h,x:x+w]
     resized_roi = cv2.resize(roi,(100,100))
     return resized_roi
@@ -262,15 +265,23 @@ class OpenCvTests:
 def main():
    openCv = OpenCvTests()
    #openCv.backgroundSubtractor()
-   img = cv2.imread('./maca.jpeg')
-   img = openCv.img_optimized(img)
+   path = './datasets/meus_produtos/kinder_ovo/'
+   fname = 'IMG_20200826_133927.jpg'
+   full_fname = os.path.join(path,fname)
+   img = cv2.imread(full_fname)
+   x = 15
+   y = 12 
+   w = 70
+   h = 75
+   img = cv2.resize(img,(100,100),interpolation=cv2.INTER_AREA)
+   openCv.removingBackground(img,(x,y,w,h),[0,0,0],False)#openCv.img_optimized(img)
    while (True):
      cv2.imshow('',img)
      k = cv2.waitKey(1)
      if k == 27:
        break
      if k == ord('s'):
-       cv2.imwrite('./maca100100.jpg',img)
+       cv2.imwrite(full_fname,img)
    cv2.destroyAllWindows()
    #openCv.trackingMouseWithKalman()
    #openCv.trackObject()
