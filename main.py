@@ -261,33 +261,63 @@ class OpenCvTests:
     roi = img[y:y+h,x:x+w]
     resized_roi = cv2.resize(roi,(100,100))
     return resized_roi
+
+  def mouse_move_interative_grabcut(self,event,x,y,flags,param):
+     
+      if self.end_draw:
+        return
+      if event == cv2.EVENT_LBUTTONDOWN:
+        if self.begin_pos is None:
+          self.begin_pos = (x,y)
+        else:
+          self.end_draw = True
+          return
+          
+      if self.begin_pos is not None:
+         _x,_y = self.begin_pos
+         self.img = self.default_img.copy()#reset image
+         w = (x-_x)
+         h = (y-_y)
+         cv2.rectangle(self.img,(_x,_y),
+                       (_x+w,_y+h),(0,255,0),1)
+         self.roi_rect = (_x,_y,w,h)
+        
+      
+  
+  def interativeGrabCut(self, img : np.ndarray, path : str):
+    self.begin_pos = None
+    self.end_draw = False
+    self.roi_rect = None
+    self.img = img
+    self.default_img = self.img.copy()
+    name = 'interative grabcut'
+    cv2.namedWindow(name)
+    cv2.setMouseCallback(name,self.mouse_move_interative_grabcut)
+    while(True):
+      cv2.imshow(name,self.img)
+      k = cv2.waitKey(1)
+      if k == 27:
+        self.img = self.default_img.copy()
+        self.begin_pos = None
+        self.end_draw = False
+        self.roi_rect = None
+      if k == ord('q'):   
+        break
+      if k == ord('g'):
+        if self.roi_rect is not None:
+         cutted_img = self.default_img.copy()
+         self.removingBackground(cutted_img,self.roi_rect,[0,0,0])
+         self.img = cutted_img.copy()
+      if k == ord('s'):
+        cv2.imwrite(path,self.img)
+    cv2.destroyAllWindows()
     
 def main():
    openCv = OpenCvTests()
-   #openCv.backgroundSubtractor()
-   path = './datasets/meus_produtos/kinder_ovo/'
-   fname = 'IMG_20200826_133927.jpg'
-   full_fname = os.path.join(path,fname)
-   img = cv2.imread(full_fname)
-   x = 15
-   y = 12 
-   w = 70
-   h = 75
-   img = cv2.resize(img,(100,100),interpolation=cv2.INTER_AREA)
-   openCv.removingBackground(img,(x,y,w,h),[0,0,0],False)#openCv.img_optimized(img)
-   while (True):
-     cv2.imshow('',img)
-     k = cv2.waitKey(1)
-     if k == 27:
-       break
-     if k == ord('s'):
-       cv2.imwrite(full_fname,img)
-   cv2.destroyAllWindows()
-   #openCv.trackingMouseWithKalman()
-   #openCv.trackObject()
-   #openCv.HarrisFeatureDetection('./livro.jpg')
-   #openCv.detectingFaces()
-   #openCv.removingBackgroundAndContour('./banana100X100.jpg',(10,25,80,80)) 
+   path = './datasets/meus_produtos/cerveja_samba/IMG_20200829_094832.jpg'
+   img = cv2.imread(path)
+   img = cv2.resize(img,(100,100),cv2.INTER_AREA)
+   openCv.interativeGrabCut(img,path)
    
 if __name__ == '__main__':
     main()
