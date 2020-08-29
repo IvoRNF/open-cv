@@ -48,11 +48,8 @@ class OpenCvTests:
         success,frame = camCapture.read()
         numFramesRemaining -= 1
         
-  def displayImageOnWindow(self, file_name : str):
-     img = cv2.pyrDown( cv2.imread(file_name) )
-     print(type(img))
-     print(img.dtype)
-     cv2.imshow(file_name,img)
+  def displayImageOnWindow(self, img):
+     cv2.imshow('',img)
      cv2.waitKey()
      cv2.destroyAllWindows()
      
@@ -311,13 +308,42 @@ class OpenCvTests:
       if k == ord('s'):
         cv2.imwrite(path,self.img)
     cv2.destroyAllWindows()
+  def matchKeypoints(self,path1 : str , path2 : str, pyrDownCount=0):
+      img1 = cv2.imread(path1,cv2.IMREAD_GRAYSCALE)
+      img2 = cv2.imread(path2,cv2.IMREAD_GRAYSCALE)
+      for i in range(0,pyrDownCount):
+        img2 = cv2.pyrDown(img2)
+      sift = cv2.xfeatures2d.SIFT_create()
+      kp1,des1 = sift.detectAndCompute(img1,None)
+      kp2,des2 = sift.detectAndCompute(img2,None)
+      FLANN_IDX_KDTREE = 1
+      idx_params = dict(algorithm=FLANN_IDX_KDTREE, trees = 5)
+      search_params = dict(checks=5)
+      flann = cv2.FlannBasedMatcher(idx_params,search_params)
+      matches = flann.knnMatch(des1,des2,k=2)
+      matchesMask = [[0,0] for i in range(len(matches))]
+      for i,(m,n) in enumerate(matches):
+        if m.distance <0.7 * n.distance:
+          matchesMask[i]=[1,0]
+      draw_params = dict(matchColor=(0,255,0),
+                         singlePointColor=(255,0,0),
+                         matchesMask=matchesMask,
+                         flags=cv2.DrawMatchesFlags_DEFAULT)
+      img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
+      return img3
     
 def main():
    openCv = OpenCvTests()
-   path = './datasets/meus_produtos/cerveja_samba/IMG_20200829_094832.jpg'
-   img = cv2.imread(path)
-   img = cv2.resize(img,(100,100),cv2.INTER_AREA)
-   openCv.interativeGrabCut(img,path)
+   #path = './datasets/meus_produtos/cerveja_samba/IMG_20200829_094832.jpg'
+   #img = cv2.imread(path)
+   #img = cv2.resize(img,(100,100),cv2.INTER_AREA)
+   #openCv.interativeGrabCut(img,path)
+   img = openCv.matchKeypoints(
+     r'.\datasets\meus_produtos\leite_ninho\IMG_20200826_134116.jpg',
+     r'.\datasets\meus_produtos\originals\IMG_20200826_134116.jpg',
+     3
+   )
+   openCv.displayImageOnWindow(img)
    
 if __name__ == '__main__':
     main()
