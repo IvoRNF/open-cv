@@ -240,12 +240,11 @@ class OpenCvTests:
     cv2.grabCut(img,mask,rect,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
     for i in range( mask.shape[1] ):
       for j in range( mask.shape[0] ):
-       if ((i > (x+w)) or (j > (y+h))): #out of roi rect
+       if ((i > (x+w)) and (j > (y+h))): #out of roi rect
          mask[i][j] = cv2.GC_BGD
     cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
     img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor
-      
-
+ 
   def img_optimized(self,img_ : np.ndarray):
     img = img_.copy()
     img = cv2.resize(img,(100,100))
@@ -331,19 +330,41 @@ class OpenCvTests:
                          flags=cv2.DrawMatchesFlags_DEFAULT)
       img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
       return img3
+  def resizeImgRoi(self,frame : np.ndarray):
+      img = frame
+      converted = False
+      if (len(img.shape)>2):
+        img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+        converted = True
+      contours, hierarchy = cv2.findContours(img , cv2.RETR_EXTERNAL,
+                                             cv2.CHAIN_APPROX_SIMPLE)
+      if(len(contours)>0):  
+        biggest_contour = contours[0]
+        for contour in contours:
+            if cv2.contourArea(contour) > cv2.contourArea(biggest_contour):
+                biggest_contour = contour
+        x,y,w,h = cv2.boundingRect(biggest_contour)
+        roi = frame[y:y+h,x:x+w]
+        return cv2.resize(roi,(100,100),interpolation=cv2.INTER_AREA)
+      return frame  
     
 def main():
+
    openCv = OpenCvTests()
-   #path = './datasets/meus_produtos/cerveja_samba/IMG_20200829_094832.jpg'
-   #img = cv2.imread(path)
-   #img = cv2.resize(img,(100,100),cv2.INTER_AREA)
+   path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
+   
+   '''for root,dirs,files in os.walk(path):
+      for name in files:
+        fname = os.path.join(root,name)
+        img = cv2.imread(fname)
+        img = openCv.resizeImgRoi(img)
+        cv2.imwrite(fname,img)
+        print(fname)'''
+   #img = cv2.resize(img,(100,100),interpolation=cv2.INTER_AREA)
    #openCv.interativeGrabCut(img,path)
-   img = openCv.matchKeypoints(
-     r'.\datasets\meus_produtos\leite_ninho\IMG_20200826_134116.jpg',
-     r'.\datasets\meus_produtos\originals\IMG_20200826_134116.jpg',
-     3
-   )
+   
    openCv.displayImageOnWindow(img)
+   
    
 if __name__ == '__main__':
     main()
