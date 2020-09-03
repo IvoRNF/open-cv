@@ -5,16 +5,17 @@ import os
 class Traineer:
 
    def __init__(self):
-      self.is_test = os.path.exists('./fruits_svm.xml')
+      self.is_test = os.path.exists('./my_svm.xml')
       self.sift = cv2.xfeatures2d.SIFT_create()
       self.FLANN_INDEX_KDTREE = 1
+      self.SVM_SCORE_THRESHOLD = 3
       self.flann = cv2.FlannBasedMatcher(
         dict(algorithm=self.FLANN_INDEX_KDTREE,trees=5),{})
-      num_clusters = 131
+      num_clusters = 12
       self.bow_kmeans_trainer = cv2.BOWKMeansTrainer( num_clusters )  
       self.bow_extractor = cv2.BOWImgDescriptorExtractor(self.sift,self.flann)
       self.files = []
-      self.dirToWalk = r'.\datasets\5857_1166105_bundle_archive\fruits-360\Test'
+      self.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
       self.training_data = []
       self.training_labels = []
       self.svm = None
@@ -64,29 +65,63 @@ class Traineer:
                 self.training_labels.append(row['index'])
    def train_or_load(self):
       if(self.is_test):
-         self.svm = cv2.ml.SVM_load('./fruits_svm.xml')
+         self.svm = cv2.ml.SVM_load('./my_svm.xml')
          print('loaded SVM from file')
       else:
-        self.svm = cv2.ml.SVM_create() 
+        self.svm = cv2.ml.SVM_create()
+        self.svm.setType(cv2.ml.SVM_C_SVC)
+        self.svm.setC(50)
+        self.svm.setGamma(0.5)
+        self.svm.setKernel(cv2.ml.SVM_RBF)
         self.svm.train(np.array(self.training_data), cv2.ml.ROW_SAMPLE,
             np.array(self.training_labels))
-        self.svm.save('./fruits_svm.xml')
+        self.svm.save('./my_svm.xml')
         print('saved SVM to file')
    def run(self):
       self.load_files()
       self.fill_bow()
       self.separate_training_data()
       self.train_or_load()
-   def get_label_name(self,index : int):
+   def get_class_name(self,index : int):
         return self.files[index]['class_name']
+
+   def pyramid(self,img, scale_factor=1.25, min_size=(100, 100),max_size=(600, 600)):
+       h, w = img.shape
+       min_w, min_h = min_size
+       max_w, max_h = max_size
+       while w >= min_w and h >= min_h:
+         if w <= max_w and h <= max_h:
+           yield img
+         w /= scale_factor
+         h /= scale_factor
+         img = cv2.resize(img, (int(w), int(h)),interpolation=cv2.INTER_AREA)   
       
    def test(self):
-      img = cv2.imread('./maca100100.jpg')
+
+      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\IMG_20200831_080315.jpg')
       gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-      descriptors = self.extract_bow_descriptors(gray_img)
-      prediction = self.svm.predict(descriptors)
-      label_idx = int(prediction[1][0][0])
-      print( self.get_label_name(label_idx) )
+
+      max_score = -1
+      prediction_class_idx = -1
+      pyrlevel = 0
+      max_score_pyrlevel = -1
+      for resized_img in self.pyramid(gray_img,max_size=gray_img.shape):
+          pyrlevel = pyrlevel + 1
+          descriptors = self.extract_bow_descriptors(resized_img)
+          if descriptors is None:
+             continue                   
+          prediction = self.svm.predict(descriptors)
+          class_idx = int(prediction[1][0][0])
+          raw_prediction = self.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
+          score = raw_prediction[1][0][0]
+          print('score %d at %d level, class %s' % (score,pyrlevel,self.get_class_name(class_idx))) 
+          if score > max_score:
+              max_score = score
+              max_score_pyrlevel = pyrlevel
+              prediction_class_idx = class_idx
+      if(max_score >= 0):
+        print( 'encontrou %s com score %d no level %d da piramide' % (self.get_class_name(prediction_class_idx),max_score,max_score_pyrlevel) )
+          
 if __name__ == '__main__':
    trainner = Traineer()    
    trainner.run()
