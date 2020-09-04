@@ -370,9 +370,10 @@ class OpenCvTests:
     fgdModel = np.zeros((1,65),np.float64)
     cv2.grabCut(img,mask,rect,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
     for (i,j),value in np.ndenumerate(mask):
-       if ((i > (x+w)) and (j > (y+h))): #out of roi rect
-         mask[i,j] = cv2.GC_BGD
-    #cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
+        inside = ( ((j > x) and (j<(x+w))) and ((i >y) and (i<(y+h)))  ) #out of roi rect 
+        if not inside: 
+          mask[i,j] = cv2.GC_BGD
+    cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
     img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor  
 def main():
 
@@ -383,10 +384,10 @@ def main():
    x,y,w,h = openCv.getBiggestContourRect(img)
    
    openCv.removingBackground(img,(x,y,w,h),[0,0,0])
-   cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
-   #roi = img[x:x+w,y:y+h]
-   #resized = cv2.resize(roi,(100,100),interpolation=cv2.INTER_AREA)
-   openCv.displayImageOnWindow(img)
+   #cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
+   roi = img[x:x+w,y:y+h]
+   resized = cv2.resize(roi,(100,100),interpolation=cv2.INTER_AREA)
+   openCv.displayImageOnWindow(resized)
 
    
 if __name__ == '__main__':
