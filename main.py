@@ -227,23 +227,7 @@ class OpenCvTests:
       if k == 27:
         break 
     cv2.destroyAllWindows()
-  def removingBackground(self,img : np.ndarray,rect,backgroundColor,draw_rect = False):   
-    x,y,w,h = rect
-    rect = (x,y,x+w,y+h)
-        
-    if draw_rect:
-     cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
-     return
-    mask = np.zeros(img.shape[:2],np.uint8)
-    bgdModel = np.zeros((1,65),np.float64)
-    fgdModel = np.zeros((1,65),np.float64)
-    cv2.grabCut(img,mask,rect,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
-    for i in range( mask.shape[1] ):
-      for j in range( mask.shape[0] ):
-       if ((i > (x+w)) and (j > (y+h))): #out of roi rect
-         mask[i][j] = cv2.GC_BGD
-    cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
-    img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor
+  
  
   def img_optimized(self,img_ : np.ndarray):
     img = img_.copy()
@@ -330,7 +314,7 @@ class OpenCvTests:
                          flags=cv2.DrawMatchesFlags_DEFAULT)
       img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
       return img3
-  def resizeImgRoi(self,frame : np.ndarray):
+  def resizeImgRoi(self,frame : np.ndarray,size=(100,100)) -> np.ndarray:
       img = frame
       converted = False
       if (len(img.shape)>2):
@@ -345,26 +329,65 @@ class OpenCvTests:
                 biggest_contour = contour
         x,y,w,h = cv2.boundingRect(biggest_contour)
         roi = frame[y:y+h,x:x+w]
-        return cv2.resize(roi,(100,100),interpolation=cv2.INTER_AREA)
+        return cv2.resize(roi,size,interpolation=cv2.INTER_AREA)
       return frame  
-    
+  def getBiggestContourRect(self,img_ : np.ndarray):
+    img = img_.copy()
+    if (len(img.shape)>2):
+      img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    img = cv2.bilateralFilter(img,9,75,75) 
+    img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
+    erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,5))
+    cv2.erode(img, erode_kernel,img,iterations=2)
+    contours, hierarchy = cv2.findContours(img , cv2.RETR_TREE,
+                                             cv2.CHAIN_APPROX_SIMPLE)
+    if(len(contours)>0):  
+      biggest_contour = None
+      for contour in contours:
+        if (biggest_contour is None):
+          area = 0
+        else:
+          area = cv2.contourArea(biggest_contour)
+        if (cv2.contourArea(contour) > area):
+            x,y,w,h = cv2.boundingRect(contour)
+            if((x != 0) and (y!=0)):
+              biggest_contour = contour
+      x,y,w,h = cv2.boundingRect(biggest_contour)
+      return (x,y,w,h)
+      #print('%d %d %d %d' % (x,y,x+w,y+h))
+      #cv2.rectangle(img_,(x,y),(x+w,y+h),(0,255,0),2)
+    #cv2.drawContours(img_,contours,-1,(0,255,0),2)
+    #self.displayImageOnWindow(img_)
+  def removingBackground(self,img : np.ndarray,rect,backgroundColor,draw_rect = False):   
+    x,y,w,h = rect
+    rect = (x,y,x+w,y+h)
+        
+    if draw_rect:
+     cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
+     return
+    mask = np.zeros(img.shape[:2],np.uint8)
+    bgdModel = np.zeros((1,65),np.float64)
+    fgdModel = np.zeros((1,65),np.float64)
+    cv2.grabCut(img,mask,rect,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
+    for (i,j),value in np.ndenumerate(mask):
+       if ((i > (x+w)) and (j > (y+h))): #out of roi rect
+         mask[i,j] = cv2.GC_BGD
+    #cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
+    img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor  
 def main():
 
    openCv = OpenCvTests()
-   path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
+   path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\IMG_20200831_080644.jpg'
+   img = cv2.pyrDown(cv2.imread(path))
+   img = cv2.pyrDown(img)
+   x,y,w,h = openCv.getBiggestContourRect(img)
    
-   '''for root,dirs,files in os.walk(path):
-      for name in files:
-        fname = os.path.join(root,name)
-        img = cv2.imread(fname)
-        img = openCv.resizeImgRoi(img)
-        cv2.imwrite(fname,img)
-        print(fname)'''
-   #img = cv2.resize(img,(100,100),interpolation=cv2.INTER_AREA)
-   #openCv.interativeGrabCut(img,path)
-   
+   openCv.removingBackground(img,(x,y,w,h),[0,0,0])
+   cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
+   #roi = img[x:x+w,y:y+h]
+   #resized = cv2.resize(roi,(100,100),interpolation=cv2.INTER_AREA)
    openCv.displayImageOnWindow(img)
-   
+
    
 if __name__ == '__main__':
     main()
