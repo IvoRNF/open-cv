@@ -28,10 +28,6 @@ class OpenCvTests:
     cv2.imshow('Contor the square ',colorImg)
     cv2.waitKey()
     cv2.destroyAllWindows()        
-
-  def convertPhoto(self,source_file_name : str,dest_file_name : str):
-    img = cv2.imread(source_file_name)
-    cv2.imwrite(dest_file_name,img)
     
   def captureVideoCamera(self,seconds : int, file_name : str):
     camCapture = cv2.VideoCapture(0)
@@ -48,7 +44,7 @@ class OpenCvTests:
         success,frame = camCapture.read()
         numFramesRemaining -= 1
         
-  def displayImageOnWindow(self, img):
+  def display(self, img):
      cv2.imshow('',img)
      cv2.waitKey()
      cv2.destroyAllWindows()
@@ -106,6 +102,8 @@ class OpenCvTests:
     cv2.destroyAllWindows()   
   def HarrisFeatureDetection(self,file_name : str):
     img = cv2.pyrDown( cv2.imread(file_name) )
+    for i in range(2):
+      img = cv2.pyrDown( img )
     grayed = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     grayed = np.float32(grayed)
     dest = cv2.cornerHarris(grayed,5,3,0.04)
@@ -228,20 +226,6 @@ class OpenCvTests:
         break 
     cv2.destroyAllWindows()
   
- 
-  def img_optimized(self,img_ : np.ndarray):
-    img = img_.copy()
-    img = cv2.resize(img,(100,100))
-    h,w = img.shape[:2]
-    x = 20
-    y = h//2 - 15
-    w = w //2
-    h = h//2 - 10
-    self.removingBackground(img,(x,y,w,h),[0,0,0],True)
-    roi = img[y:y+h,x:x+w]
-    resized_roi = cv2.resize(roi,(100,100))
-    return resized_roi
-
   def mouse_move_interative_grabcut(self,event,x,y,flags,param):
      
       if self.end_draw:
@@ -313,29 +297,35 @@ class OpenCvTests:
                          matchesMask=matchesMask,
                          flags=cv2.DrawMatchesFlags_DEFAULT)
       img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
-      return img3
-  def resizeImgRoi(self,frame : np.ndarray,size=(100,100)) -> np.ndarray:
-      img = frame
-      converted = False
-      if (len(img.shape)>2):
-        img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-        converted = True
-      contours, hierarchy = cv2.findContours(img , cv2.RETR_EXTERNAL,
-                                             cv2.CHAIN_APPROX_SIMPLE)
-      if(len(contours)>0):  
-        biggest_contour = contours[0]
-        for contour in contours:
-            if cv2.contourArea(contour) > cv2.contourArea(biggest_contour):
-                biggest_contour = contour
-        x,y,w,h = cv2.boundingRect(biggest_contour)
-        roi = frame[y:y+h,x:x+w]
-        return cv2.resize(roi,size,interpolation=cv2.INTER_AREA)
-      return frame  
+      return img3 
   def getBiggestContourRect(self,img_ : np.ndarray):
     img = img_.copy()
     if (len(img.shape)>2):
       img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    img = cv2.bilateralFilter(img,9,75,75) 
+    img = np.float32(img)
+    dest = cv2.cornerHarris(img,5,3,0.04)
+    menorX = img.shape[0]
+    menorX = img.shape[0]
+    maiorX = 0
+    maiorY = 0
+    menorY = img.shape[1]
+    maxi = dest.max()
+    for (x,y),elem in np.ndenumerate(dest):
+       if( elem >(0.01*maxi)):
+         if(x < menorX):
+           menorX = x
+         if (x > maiorX):
+            maiorX = x
+         if(y > maiorY):
+           maiorY = y
+         if (y < menorY):
+           menorY = y
+    x = menorY
+    y = menorX
+    w = (maiorY - menorY) 
+    h =  (maiorX - menorX) 
+    return (x,y,w,h)
+    '''img = cv2.bilateralFilter(img,9,75,75) 
     img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
     erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,5))
     cv2.erode(img, erode_kernel,img,iterations=2)
@@ -353,11 +343,7 @@ class OpenCvTests:
             if((x != 0) and (y!=0)):
               biggest_contour = contour
       x,y,w,h = cv2.boundingRect(biggest_contour)
-      return (x,y,w,h)
-      #print('%d %d %d %d' % (x,y,x+w,y+h))
-      #cv2.rectangle(img_,(x,y),(x+w,y+h),(0,255,0),2)
-    #cv2.drawContours(img_,contours,-1,(0,255,0),2)
-    #self.displayImageOnWindow(img_)
+      return (x,y,w,h)'''
   def removingBackground(self,img : np.ndarray,rect,backgroundColor,draw_rect = False):   
     x,y,w,h = rect
     rect = (x,y,x+w,y+h)
@@ -375,19 +361,43 @@ class OpenCvTests:
           mask[i,j] = cv2.GC_BGD
     cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
     img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor  
+  def prepareImgsForTrainning(self,path : str , new_path : str, pyr_down_iterations = 3):
+    for root,dirs,files in os.walk(path):
+        for name in files:
+          basename = os.path.basename(root)
+          fullfname = os.path.join(root,name)
+          img = cv2.imread(fullfname)
+          for i in range(pyr_down_iterations):
+            img = cv2.pyrDown(img)
+          x,y,w,h = self.getBiggestContourRect(img)
+          self.removingBackground(img,(x,y,w,h),[0,0,0])
+          img_roi = img[x:x+w,y:y+h]
+          img = cv2.resize(img_roi,(100,100),interpolation=cv2.INTER_AREA)
+          new_fname = os.path.join(basename , name)
+          new_fname = os.path.join(new_path , new_fname)
+          print('writing %s ' % (new_fname))
+          directory = os.path.dirname(new_fname)
+          if not os.path.exists(directory):
+             os.makedirs(directory)
+          cv2.imwrite(new_fname,img)
 def main():
 
-   openCv = OpenCvTests()
-   path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\IMG_20200831_080644.jpg'
-   img = cv2.pyrDown(cv2.imread(path))
-   img = cv2.pyrDown(img)
-   x,y,w,h = openCv.getBiggestContourRect(img)
+   cv = OpenCvTests()
+   path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
+   new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
+   cv.prepareImgsForTrainning(path,new_path)
    
-   openCv.removingBackground(img,(x,y,w,h),[0,0,0])
-   #cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
-   roi = img[x:x+w,y:y+h]
-   resized = cv2.resize(roi,(100,100),interpolation=cv2.INTER_AREA)
-   openCv.displayImageOnWindow(resized)
+   #fname = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\fermento\IMG_20200831_080722.jpg'
+   '''img_ = cv2.imread(fname)
+   
+   for i in range(3):
+      img_ = cv2.pyrDown(img_)
+   img = img_.copy()   
+   img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+   
+   x,y,w,h = cv.getBiggestContourRect(img_)
+   cv2.rectangle(img_,(x,y  ),(x+w,y+h),(0,255,0),1)
+   cv.display(img_)'''
 
    
 if __name__ == '__main__':

@@ -72,7 +72,8 @@ class Traineer:
         self.svm.setType(cv2.ml.SVM_C_SVC)
         self.svm.setC(50)
         self.svm.setGamma(0.5)
-        self.svm.setKernel(cv2.ml.SVM_RBF)
+        self.svm.setKernel(cv2.ml.SVM_RBF)
+
         self.svm.train(np.array(self.training_data), cv2.ml.ROW_SAMPLE,
             np.array(self.training_labels))
         self.svm.save('./my_svm.xml')
@@ -95,7 +96,6 @@ class Traineer:
          w /= scale_factor
          h /= scale_factor
          img = cv2.resize(img, (int(w), int(h)),interpolation=cv2.INTER_AREA)   
-      
    def test(self):
 
       img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\IMG_20200831_080315.jpg')
@@ -126,32 +126,6 @@ if __name__ == '__main__':
    trainner = Traineer()    
    trainner.run()
    trainner.test()  
-''' 
-
-    
-     
-for test_img_path in ['CarData/TestImages/test-0.pgm',
-     'CarData/TestImages/test-1.pgm',
-     '../images/car.jpg',
-     '../images/haying.jpg',
-     '../images/statue.jpg',
-     '../images/woodcutters.jpg']:
-     img = cv2.imread(test_img_path)
-     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-     descriptors = extract_bow_descriptors(gray_img)
-     prediction = svm.predict(descriptors)
-     if prediction[1][0][0] == 1.0:
-         text = 'car'
-         color = (0, 255, 0)
-     else:
-         text = 'not car'
-         color = (0, 0, 255)
-     cv2.putText(img, text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1,
-         color, 2, cv2.LINE_AA)
-     cv2.imshow(test_img_path, img)
-cv2.waitKey(0)     
-'''     
-     
 
 
 
