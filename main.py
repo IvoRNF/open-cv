@@ -298,34 +298,12 @@ class OpenCvTests:
                          flags=cv2.DrawMatchesFlags_DEFAULT)
       img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
       return img3 
+
   def getBiggestContourRect(self,img_ : np.ndarray):
     img = img_.copy()
     if (len(img.shape)>2):
       img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    img = np.float32(img)
-    dest = cv2.cornerHarris(img,5,3,0.04)
-    menorX = img.shape[0]
-    menorX = img.shape[0]
-    maiorX = 0
-    maiorY = 0
-    menorY = img.shape[1]
-    maxi = dest.max()
-    for (x,y),elem in np.ndenumerate(dest):
-       if( elem >(0.01*maxi)):
-         if(x < menorX):
-           menorX = x
-         if (x > maiorX):
-            maiorX = x
-         if(y > maiorY):
-           maiorY = y
-         if (y < menorY):
-           menorY = y
-    x = menorY
-    y = menorX
-    w = (maiorY - menorY) 
-    h =  (maiorX - menorX) 
-    return (x,y,w,h)
-    '''img = cv2.bilateralFilter(img,9,75,75) 
+    img = cv2.bilateralFilter(img,9,75,75) 
     img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
     erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,5))
     cv2.erode(img, erode_kernel,img,iterations=2)
@@ -343,7 +321,47 @@ class OpenCvTests:
             if((x != 0) and (y!=0)):
               biggest_contour = contour
       x,y,w,h = cv2.boundingRect(biggest_contour)
-      return (x,y,w,h)'''
+      return (x,y,w,h)
+
+
+  def getBiggestCornerRect(self,img_ : np.ndarray,fator_corner=0.04, pad_rect=0.03):
+    img = img_.copy()
+    if (len(img.shape)>2):
+      img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+    img = np.float32(img)
+    dest = cv2.cornerHarris(img,5,23,0.05)
+    menorX = img.shape[0]
+    maiorX = 0
+    maiorY = 0
+    menorY = img.shape[1]
+    maxi = dest.max()
+    fatorX = int(img.shape[0]*fator_corner)
+    fatorY = int(img.shape[1]*fator_corner)
+    
+    for (x,y),elem in np.ndenumerate(dest):
+       if( elem >(0.01*maxi)):
+         if(x < menorX)and (x > fatorX):
+           menorX = x
+         if (x > maiorX) and (x < img.shape[0]-fatorX):
+            maiorX = x
+         if(y > maiorY) and (y < img.shape[1]-fatorY):
+           maiorY = y
+         if (y < menorY) and y > fatorY:
+           menorY = y
+    x = menorY
+    y = menorX
+    w = (maiorY - menorY) 
+    h =  (maiorX - menorX)
+    gapY = int(img.shape[0]*pad_rect)
+    gapX = int(img.shape[1]*pad_rect)
+    if(y - gapY)>0:
+      y = y - gapY
+      h = h+gapY*2
+    if(x - gapX)>0:
+      x = x - gapX
+      w = w+gapX*2
+    return (x,y,w,h)
+    
   def removingBackground(self,img : np.ndarray,rect,backgroundColor,draw_rect = False):   
     x,y,w,h = rect
     rect = (x,y,x+w,y+h)
@@ -369,12 +387,14 @@ class OpenCvTests:
           img = cv2.imread(fullfname)
           for i in range(pyr_down_iterations):
             img = cv2.pyrDown(img)
-          x,y,w,h = self.getBiggestContourRect(img)
+          x,y,w,h = self.getBiggestCornerRect(img)
           self.removingBackground(img,(x,y,w,h),[0,0,0])
+          x,y,w,h = self.getBiggestContourRect(img)
           img_roi = img[x:x+w,y:y+h]
-          img = cv2.resize(img_roi,(100,100),interpolation=cv2.INTER_AREA)
+          img = cv2.resize(img_roi,(200,200),interpolation=cv2.INTER_AREA)
           new_fname = os.path.join(basename , name)
           new_fname = os.path.join(new_path , new_fname)
+          #cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
           print('writing %s ' % (new_fname))
           directory = os.path.dirname(new_fname)
           if not os.path.exists(directory):
@@ -387,17 +407,18 @@ def main():
    new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
    cv.prepareImgsForTrainning(path,new_path)
    
-   #fname = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\fermento\IMG_20200831_080722.jpg'
-   '''img_ = cv2.imread(fname)
    
-   for i in range(3):
-      img_ = cv2.pyrDown(img_)
-   img = img_.copy()   
-   img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+   #fname = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\fermento\IMG_20200831_080738.jpg'
+   #img_ = cv2.imread(fname)
    
-   x,y,w,h = cv.getBiggestContourRect(img_)
-   cv2.rectangle(img_,(x,y  ),(x+w,y+h),(0,255,0),1)
-   cv.display(img_)'''
+   #for i in range(3):
+   #   img_ = cv2.pyrDown(img_)
+   #img = img_.copy()   
+   #img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+   
+   #x,y,w,h = cv.getBiggestCornerRect(img_)
+   #cv2.rectangle(img_,(x,y  ),(x+w,y+h),(0,255,0),1)
+   #cv.display(img_)'''
 
    
 if __name__ == '__main__':

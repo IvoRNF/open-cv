@@ -86,7 +86,7 @@ class Traineer:
    def get_class_name(self,index : int):
         return self.files[index]['class_name']
 
-   def pyramid(self,img, scale_factor=1.25, min_size=(100, 100),max_size=(600, 600)):
+   def pyramid(self,img, scale_factor=1.25, min_size=(200, 200),max_size=(600, 600)):
        h, w = img.shape
        min_w, min_h = min_size
        max_w, max_h = max_size
@@ -98,14 +98,14 @@ class Traineer:
          img = cv2.resize(img, (int(w), int(h)),interpolation=cv2.INTER_AREA)   
    def test(self):
 
-      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\IMG_20200831_080315.jpg')
+      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\kinder_ovo\IMG_20200826_133838.jpg')
       gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
       max_score = -1
       prediction_class_idx = -1
       pyrlevel = 0
       max_score_pyrlevel = -1
-      for resized_img in self.pyramid(gray_img,max_size=gray_img.shape):
+      for resized_img in self.pyramid(gray_img,max_size=(300,300)):
           pyrlevel = pyrlevel + 1
           descriptors = self.extract_bow_descriptors(resized_img)
           if descriptors is None:
@@ -113,14 +113,14 @@ class Traineer:
           prediction = self.svm.predict(descriptors)
           class_idx = int(prediction[1][0][0])
           raw_prediction = self.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
-          score = raw_prediction[1][0][0]
+          score = abs(raw_prediction[1][0][0])
           print('score %d at %d level, class %s' % (score,pyrlevel,self.get_class_name(class_idx))) 
           if score > max_score:
               max_score = score
               max_score_pyrlevel = pyrlevel
               prediction_class_idx = class_idx
-      if(max_score >= 0):
-        print( 'encontrou %s com score %d no level %d da piramide' % (self.get_class_name(prediction_class_idx),max_score,max_score_pyrlevel) )
+      
+      print( 'encontrou %s com score %d no level %d da piramide' % (self.get_class_name(prediction_class_idx),max_score,max_score_pyrlevel) )
           
 if __name__ == '__main__':
    trainner = Traineer()    
