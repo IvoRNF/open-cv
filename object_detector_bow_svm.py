@@ -5,7 +5,8 @@ import os
 class Traineer:
 
    def __init__(self):
-      self.is_test = os.path.exists('./my_svm.xml')
+      self.svm_fname = './my_svm.xml'
+      self.is_test = os.path.exists(self.svm_fname)
       self.sift = cv2.xfeatures2d.SIFT_create()
       self.FLANN_INDEX_KDTREE = 1
       self.SVM_SCORE_THRESHOLD = 3
@@ -65,7 +66,7 @@ class Traineer:
                 self.training_labels.append(row['index'])
    def train_or_load(self):
       if(self.is_test):
-         self.svm = cv2.ml.SVM_load('./my_svm.xml')
+         self.svm = cv2.ml.SVM_load(self.svm_fname)
          print('loaded SVM from file')
       else:
         self.svm = cv2.ml.SVM_create()
@@ -76,7 +77,7 @@ class Traineer:
 
         self.svm.train(np.array(self.training_data), cv2.ml.ROW_SAMPLE,
             np.array(self.training_labels))
-        self.svm.save('./my_svm.xml')
+        self.svm.save(self.svm_fname)
         print('saved SVM to file')
    def run(self):
       self.load_files()
@@ -98,14 +99,14 @@ class Traineer:
          img = cv2.resize(img, (int(w), int(h)),interpolation=cv2.INTER_AREA)   
    def test(self):
 
-      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\kinder_ovo\IMG_20200826_133838.jpg')
+      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200826_134116.jpg')
       gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
       max_score = -1
       prediction_class_idx = -1
       pyrlevel = 0
       max_score_pyrlevel = -1
-      for resized_img in self.pyramid(gray_img,max_size=(300,300)):
+      for resized_img in self.pyramid(gray_img,max_size=gray_img.shape):
           pyrlevel = pyrlevel + 1
           descriptors = self.extract_bow_descriptors(resized_img)
           if descriptors is None:
@@ -113,14 +114,14 @@ class Traineer:
           prediction = self.svm.predict(descriptors)
           class_idx = int(prediction[1][0][0])
           raw_prediction = self.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
-          score = abs(raw_prediction[1][0][0])
+          score = raw_prediction[1][0][0]
           print('score %d at %d level, class %s' % (score,pyrlevel,self.get_class_name(class_idx))) 
           if score > max_score:
               max_score = score
               max_score_pyrlevel = pyrlevel
               prediction_class_idx = class_idx
       
-      print( 'encontrou %s com score %d no level %d da piramide' % (self.get_class_name(prediction_class_idx),max_score,max_score_pyrlevel) )
+      #5print( 'encontrou %s com score %d no level %d da piramide' % (self.get_class_name(prediction_class_idx),max_score,max_score_pyrlevel) )
           
 if __name__ == '__main__':
    trainner = Traineer()    

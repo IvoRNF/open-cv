@@ -1,12 +1,14 @@
 import numpy as np 
 import cv2
 import os
+from object_detector_bow_svm import Traineer
 
 
 class OpenCvTests:
 
-  def __init__(self):
-      pass
+  def __init__(self,traineer : Traineer = None):
+    
+      self.traineer = traineer
       
   
   
@@ -151,7 +153,7 @@ class OpenCvTests:
     cv2.destroyAllWindows()
     capture.release()
 
-  def backgroundSubtractor(self):
+  def backgroundSubtractor(self,callback = None):
     capture = cv2.VideoCapture(0)
     bkSubtractor = cv2.createBackgroundSubtractorKNN(detectShadows=False)
     erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,5))
@@ -170,7 +172,11 @@ class OpenCvTests:
             if cv2.contourArea(contour) > cv2.contourArea(biggest_contour):
                 biggest_contour = contour
       x,y,w,h = cv2.boundingRect(biggest_contour)
-      cv2.rectangle(frame,(x,y),(x+w,y+h),(255,255,0),2)
+      if callback is not None:
+        rect = (x,y,w,h) 
+        callback(frame,rect)
+      else:
+        cv2.rectangle(frame,(x,y),(x+w,y+h),(255,255,0),2)
       cv2.imshow('MOG BGR Subtractor',frame)
       k = cv2.waitKey(30)
       if k == 27:
@@ -390,7 +396,7 @@ class OpenCvTests:
           x,y,w,h = self.getBiggestCornerRect(img)
           self.removingBackground(img,(x,y,w,h),[0,0,0])
           x,y,w,h = self.getBiggestContourRect(img)
-          img_roi = img[x:x+w,y:y+h]
+          img_roi = img[y:y+h,x:x+w]
           img = cv2.resize(img_roi,(200,200),interpolation=cv2.INTER_AREA)
           new_fname = os.path.join(basename , name)
           new_fname = os.path.join(new_path , new_fname)
@@ -400,15 +406,37 @@ class OpenCvTests:
           if not os.path.exists(directory):
              os.makedirs(directory)
           cv2.imwrite(new_fname,img)
+
+  def trySVMPredict(self,frame ,rect):
+    x,y,w,h = rect
+    roi = frame[y:y+h,x:x+w]
+    roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    #pyrlevel = 0
+    #for resized_img in self.traineer.pyramid(roi,max_size=(600,600)):
+    #pyrlevel = pyrlevel + 1
+    descriptors = self.traineer.extract_bow_descriptors(roi)
+    if descriptors is None:
+       return                   
+    prediction = self.traineer.svm.predict(descriptors)
+    class_idx = int(prediction[1][0][0])
+    raw_prediction = self.traineer.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
+    score = raw_prediction[1][0][0]
+    class_name = self.traineer.get_class_name(class_idx)
+    frame = cv2.putText(frame, '%s with score %d' % (class_name,score), (25,25), cv2.FONT_HERSHEY_SIMPLEX,1, (255,0,0), 2, cv2.LINE_AA)
+    #print('score %d at %d level, class %s' % (score,pyrlevel,self.get_class_name(class_idx))) 
+          
 def main():
 
-   cv = OpenCvTests()
-   path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
-   new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
-   cv.prepareImgsForTrainning(path,new_path)
+   cv = OpenCvTests(Traineer())
+   cv.traineer.run()
+   cv.backgroundSubtractor(cv.trySVMPredict)
+   
+   #path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
+   #new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
+   #cv.prepareImgsForTrainning(path,new_path)
    
    
-   #fname = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\fermento\IMG_20200831_080738.jpg'
+   #fname = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200829_094657.jpg'
    #img_ = cv2.imread(fname)
    
    #for i in range(3):
@@ -418,8 +446,10 @@ def main():
    
    #x,y,w,h = cv.getBiggestCornerRect(img_)
    #cv2.rectangle(img_,(x,y  ),(x+w,y+h),(0,255,0),1)
-   #cv.display(img_)'''
-
+   #cv.removingBackground(img_,(x,y,w,h),[0,0,0])
+   #img_roi = img_[y:y+h,x:x+w]
+   #img = cv2.resize(img_roi,(200,200),interpolation=cv2.INTER_AREA)
+   #cv.display(img)
    
 if __name__ == '__main__':
     main()
