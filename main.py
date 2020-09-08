@@ -9,7 +9,7 @@ class OpenCvTests:
   def __init__(self,traineer : Traineer = None):
     
       self.traineer = traineer
-      
+      self.snapshotIdx = 0
   
   
 
@@ -172,13 +172,14 @@ class OpenCvTests:
             if cv2.contourArea(contour) > cv2.contourArea(biggest_contour):
                 biggest_contour = contour
       x,y,w,h = cv2.boundingRect(biggest_contour)
-      if callback is not None:
-        rect = (x,y,w,h) 
-        callback(frame,rect)
-      else:
-        cv2.rectangle(frame,(x,y),(x+w,y+h),(255,255,0),2)
+      
       cv2.imshow('MOG BGR Subtractor',frame)
       k = cv2.waitKey(30)
+      if callback is not None:
+        rect = (x,y,w,h) 
+        callback(frame,rect,k)
+      else:
+        cv2.rectangle(frame,(x,y),(x+w,y+h),(255,255,0),2)
       if k == 27:
         break
       captured,frame = capture.read()
@@ -407,10 +408,12 @@ class OpenCvTests:
              os.makedirs(directory)
           cv2.imwrite(new_fname,img)
 
-  def trySVMPredict(self,frame ,rect):
+  def trySVMPredict(self,frame ,rect,key = None):
     x,y,w,h = rect
     roi = frame[y:y+h,x:x+w]
-    roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
+    #roi = cv2.resize(roi,(200,200),interpolation=cv2.INTER_AREA)
+    if(len(roi.shape) > 2):
+      roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
     #pyrlevel = 0
     #for resized_img in self.traineer.pyramid(roi,max_size=(600,600)):
     #pyrlevel = pyrlevel + 1
@@ -422,15 +425,27 @@ class OpenCvTests:
     raw_prediction = self.traineer.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
     score = raw_prediction[1][0][0]
     class_name = self.traineer.get_class_name(class_idx)
-    frame = cv2.putText(frame, '%s with score %d' % (class_name,score), (25,25), cv2.FONT_HERSHEY_SIMPLEX,1, (255,0,0), 2, cv2.LINE_AA)
+    frame = cv2.putText(frame, '%s with score %d' % (class_name,score), (25,25), cv2.FONT_HERSHEY_SIMPLEX,0.4, (255,0,0), 2, cv2.LINE_AA)
     #print('score %d at %d level, class %s' % (score,pyrlevel,self.get_class_name(class_idx))) 
-          
+  def doSaveFile(self,frame ,rect,key):
+    if key == ord('s'):
+      x,y,w,h = rect
+      roi = frame[y:y+h,x:x+w]
+      self.snapshotIdx = self.snapshotIdx + 1
+      cv2.imwrite('snapshot%d.jpg' % (self.snapshotIdx) ,roi)
 def main():
 
    cv = OpenCvTests(Traineer())
    cv.traineer.run()
-   cv.backgroundSubtractor(cv.trySVMPredict)
-   
+   #cv.backgroundSubtractor(cv.doSaveFile)
+   img = cv2.imread(r'.\datasets\originals\fermento\IMG_20200907_144752708_BURST007.jpg')
+
+
+   img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
+   #for i in range(5):
+     #img = cv2.pyrDown(img)
+   cv.trySVMPredict(img,(0,0,img.shape[1],img.shape[0]))
+   cv.display(img)
    #path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
    #new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
    #cv.prepareImgsForTrainning(path,new_path)
