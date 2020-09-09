@@ -392,13 +392,15 @@ class OpenCvTests:
           basename = os.path.basename(root)
           fullfname = os.path.join(root,name)
           img = cv2.imread(fullfname)
+          if(img.shape[0] < img.shape[1]): 
+            img = cv2.rotate(img, cv2.cv2.ROTATE_90_CLOCKWISE)
           for i in range(pyr_down_iterations):
             img = cv2.pyrDown(img)
           x,y,w,h = self.getBiggestCornerRect(img)
           self.removingBackground(img,(x,y,w,h),[0,0,0])
           x,y,w,h = self.getBiggestContourRect(img)
           img_roi = img[y:y+h,x:x+w]
-          img = cv2.resize(img_roi,(200,200),interpolation=cv2.INTER_AREA)
+          img = cv2.resize(img_roi,(150,200),interpolation=cv2.INTER_AREA)
           new_fname = os.path.join(basename , name)
           new_fname = os.path.join(new_path , new_fname)
           #cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
@@ -436,35 +438,15 @@ class OpenCvTests:
 def main():
 
    cv = OpenCvTests(Traineer())
-   cv.traineer.run()
+   #cv.traineer.run()
    #cv.backgroundSubtractor(cv.doSaveFile)
-   img = cv2.imread(r'.\datasets\originals\fermento\IMG_20200907_144752708_BURST007.jpg')
-
-
-   img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-   #for i in range(5):
-     #img = cv2.pyrDown(img)
-   cv.trySVMPredict(img,(0,0,img.shape[1],img.shape[0]))
-   cv.display(img)
-   #path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
-   #new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
-   #cv.prepareImgsForTrainning(path,new_path)
    
    
-   #fname = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200829_094657.jpg'
-   #img_ = cv2.imread(fname)
+   path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
+   new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
+   cv.prepareImgsForTrainning(path,new_path)
    
-   #for i in range(3):
-   #   img_ = cv2.pyrDown(img_)
-   #img = img_.copy()   
-   #img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-   
-   #x,y,w,h = cv.getBiggestCornerRect(img_)
-   #cv2.rectangle(img_,(x,y  ),(x+w,y+h),(0,255,0),1)
-   #cv.removingBackground(img_,(x,y,w,h),[0,0,0])
-   #img_roi = img_[y:y+h,x:x+w]
-   #img = cv2.resize(img_roi,(200,200),interpolation=cv2.INTER_AREA)
-   #cv.display(img)
+  
    
 if __name__ == '__main__':
     main()

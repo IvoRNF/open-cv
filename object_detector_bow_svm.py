@@ -87,7 +87,7 @@ class Traineer:
    def get_class_name(self,index : int):
         return self.files[index]['class_name']
 
-   def pyramid(self,img, scale_factor=1.25, min_size=(200, 200),max_size=(600, 600)):
+   def pyramid(self,img, scale_factor=1.25, min_size=(200, 150),max_size=(600, 600)):
        h, w = img.shape
        min_w, min_h = min_size
        max_w, max_h = max_size
