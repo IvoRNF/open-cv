@@ -398,8 +398,8 @@ class OpenCvTests:
           for i in range(pyr_down_iterations):
             img = cv2.pyrDown(img)
           x,y,w,h = self.getBiggestCornerRect(img)
-          self.removingBackground(img,(x,y,w,h),[0,0,0])
-          x,y,w,h = self.getBiggestContourRect(img)
+          #self.removingBackground(img,(x,y,w,h),[0,0,0])
+          #x,y,w,h = self.getBiggestContourRect(img)
           img_roi = img[y:y+h,x:x+w]
           img = cv2.resize(img_roi,(150,200),interpolation=cv2.INTER_AREA)
           new_fname = os.path.join(basename , name)
@@ -428,9 +428,10 @@ class OpenCvTests:
     raw_prediction = self.traineer.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
     score = raw_prediction[1][0][0]
     class_name = self.traineer.get_class_name(class_idx)
-    #if(score<=0):  
-    frame = cv2.putText(frame, '%s with score %d, class %d' % (class_name,score,class_idx), (25,25), cv2.FONT_HERSHEY_SIMPLEX,0.7, (255,0,0), 2, cv2.LINE_AA)
-    #print( '%s with score %d' % (class_name,score)) 
+    #if(score<=0):
+    txt =  '%s with score %d, class %d' % (class_name,score,class_idx)
+    frame = cv2.putText(frame,txt, (25,25), cv2.FONT_HERSHEY_SIMPLEX,0.7, (255,0,0), 2, cv2.LINE_AA)
+    print(txt) 
   def doSaveFile(self,frame ,rect,key):
     if key == ord('s'):
       x,y,w,h = rect
@@ -445,7 +446,10 @@ def main():
    cv = OpenCvTests(Traineer())
    if v=='1': 
      cv.traineer.run()
-     cv.backgroundSubtractor(cv.trySVMPredict)
+     img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200910_130241429_BURST000_COVER.jpg')
+     rect = (0,0,img.shape[1],img.shape[0])
+     cv.trySVMPredict(img,rect)
+     #cv.backgroundSubtractor(cv.trySVMPredict)
    elif v=='2':
      if(os.path.exists(cv.traineer.svm_fname)):
        os.remove(cv.traineer.svm_fname)
