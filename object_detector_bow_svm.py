@@ -71,8 +71,8 @@ class Traineer:
       else:
         self.svm = cv2.ml.SVM_create()
         self.svm.setType(cv2.ml.SVM_C_SVC)
-        self.svm.setC(50)
-        self.svm.setGamma(0.5)
+        self.svm.setC(40)
+        self.svm.setGamma(0.2)
         self.svm.setKernel(cv2.ml.SVM_RBF)
 
         self.svm.train(np.array(self.training_data), cv2.ml.ROW_SAMPLE,

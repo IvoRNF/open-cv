@@ -173,7 +173,6 @@ class OpenCvTests:
                 biggest_contour = contour
       x,y,w,h = cv2.boundingRect(biggest_contour)
       
-      cv2.imshow('MOG BGR Subtractor',frame)
       k = cv2.waitKey(30)
       if callback is not None:
         rect = (x,y,w,h) 
@@ -182,6 +181,8 @@ class OpenCvTests:
         cv2.rectangle(frame,(x,y),(x+w,y+h),(255,255,0),2)
       if k == 27:
         break
+      cv2.imshow('MOG BGR Subtractor',frame)
+      
       captured,frame = capture.read()
     capture.release()
     cv2.destroyAllWindows()
@@ -427,8 +428,9 @@ class OpenCvTests:
     raw_prediction = self.traineer.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
     score = raw_prediction[1][0][0]
     class_name = self.traineer.get_class_name(class_idx)
-    frame = cv2.putText(frame, '%s with score %d' % (class_name,score), (25,25), cv2.FONT_HERSHEY_SIMPLEX,0.4, (255,0,0), 2, cv2.LINE_AA)
-    #print('score %d at %d level, class %s' % (score,pyrlevel,self.get_class_name(class_idx))) 
+    #if(score<=0):  
+    frame = cv2.putText(frame, '%s with score %d, class %d' % (class_name,score,class_idx), (25,25), cv2.FONT_HERSHEY_SIMPLEX,0.7, (255,0,0), 2, cv2.LINE_AA)
+    #print( '%s with score %d' % (class_name,score)) 
   def doSaveFile(self,frame ,rect,key):
     if key == ord('s'):
       x,y,w,h = rect
@@ -437,16 +439,20 @@ class OpenCvTests:
       cv2.imwrite('snapshot%d.jpg' % (self.snapshotIdx) ,roi)
 def main():
 
+
+   print('my svm . \n 1 - testar . \n 2 - treinar')
+   v = input()
    cv = OpenCvTests(Traineer())
-   #cv.traineer.run()
-   #cv.backgroundSubtractor(cv.doSaveFile)
+   if v=='1': 
+     cv.traineer.run()
+     cv.backgroundSubtractor(cv.trySVMPredict)
+   elif v=='2':
+     if(os.path.exists(cv.traineer.svm_fname)):
+       os.remove(cv.traineer.svm_fname)
+     path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
+     new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
+     cv.prepareImgsForTrainning(path,new_path)
    
-   
-   path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
-   new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
-   cv.prepareImgsForTrainning(path,new_path)
-   
-  
    
 if __name__ == '__main__':
     main()
