@@ -12,8 +12,8 @@ class Traineer:
       self.SVM_SCORE_THRESHOLD = 3
       self.flann = cv2.FlannBasedMatcher(
         dict(algorithm=self.FLANN_INDEX_KDTREE,trees=5),{})
-      num_clusters = 12
-      self.bow_kmeans_trainer = cv2.BOWKMeansTrainer( num_clusters )  
+      self.num_clusters = 12
+      self.bow_kmeans_trainer = cv2.BOWKMeansTrainer( self.num_clusters )  
       self.bow_extractor = cv2.BOWImgDescriptorExtractor(self.sift,self.flann)
       self.files = []
       self.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
@@ -54,6 +54,22 @@ class Traineer:
    def extract_bow_descriptors(self,img : np.ndarray):
        features = self.sift.detect(img)
        return self.bow_extractor.compute(img, features)
+   def extract_bow_descriptors_teste(self,img : np.ndarray):
+       if(len(img.shape)>2):
+         img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+       sift = cv2.xfeatures2d.SIFT_create()  
+       keypoints, descriptors = sift.detectAndCompute(img, None)
+       if(descriptors is None):
+          return 
+       bow_kmeans_trainer = cv2.BOWKMeansTrainer( self.num_clusters )
+       bow_kmeans_trainer.add(descriptors)
+       voc = bow_kmeans_trainer.cluster()
+       features = sift.detect(img)
+       flann = cv2.FlannBasedMatcher(
+        dict(algorithm=self.FLANN_INDEX_KDTREE,trees=5),{})
+       bow_extractor = cv2.BOWImgDescriptorExtractor(sift,flann)
+       bow_extractor.setVocabulary(voc)   
+       return bow_extractor.compute(img,features)
    def separate_training_data(self):
      if self.is_test:
         return

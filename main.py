@@ -332,7 +332,7 @@ class OpenCvTests:
       return (x,y,w,h)
 
 
-  def getBiggestCornerRect(self,img_ : np.ndarray,fator_corner=0.04, pad_rect=0.03):
+  def getBiggestCornerRect(self,img_ : np.ndarray,factor_as_corner=0.02, zoom_up_rect=0.07):
     img = img_.copy()
     if (len(img.shape)>2):
       img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
@@ -343,8 +343,8 @@ class OpenCvTests:
     maiorY = 0
     menorY = img.shape[1]
     maxi = dest.max()
-    fatorX = int(img.shape[0]*fator_corner)
-    fatorY = int(img.shape[1]*fator_corner)
+    fatorX = int(img.shape[0]*factor_as_corner)
+    fatorY = int(img.shape[1]*factor_as_corner)
     
     for (x,y),elem in np.ndenumerate(dest):
        if( elem >(0.01*maxi)):
@@ -360,8 +360,8 @@ class OpenCvTests:
     y = menorX
     w = (maiorY - menorY) 
     h =  (maiorX - menorX)
-    gapY = int(img.shape[0]*pad_rect)
-    gapX = int(img.shape[1]*pad_rect)
+    gapY = int(img.shape[0]*zoom_up_rect)
+    gapX = int(img.shape[1]*zoom_up_rect)
     if(y - gapY)>0:
       y = y - gapY
       h = h+gapY*2
@@ -383,11 +383,13 @@ class OpenCvTests:
     cv2.grabCut(img,mask,rect,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_RECT)
     for (i,j),value in np.ndenumerate(mask):
         inside = ( ((j > x) and (j<(x+w))) and ((i >y) and (i<(y+h)))  ) #out of roi rect 
-        if not inside: 
-          mask[i,j] = cv2.GC_BGD
+        if inside: 
+          mask[i,j] = cv2.GC_PR_FGD
+        else:
+          mask[i,j] = cv2.GC_BGD 
     cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
     img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor  
-  def prepareImgsForTrainning(self,path : str , new_path : str, pyr_down_iterations = 3):
+  def prepareImgsForTrainning(self,path : str , new_path : str, pyr_down_iterations = 3, removeBackground=True):
     for root,dirs,files in os.walk(path):
         for name in files:
           basename = os.path.basename(root)
@@ -398,7 +400,8 @@ class OpenCvTests:
           for i in range(pyr_down_iterations):
             img = cv2.pyrDown(img)
           x,y,w,h = self.getBiggestCornerRect(img)
-          #self.removingBackground(img,(x,y,w,h),[0,0,0])
+          if(removeBackground):
+            self.removingBackground(img,(x,y,w,h),[0,0,0])
           #x,y,w,h = self.getBiggestContourRect(img)
           img_roi = img[y:y+h,x:x+w]
           img = cv2.resize(img_roi,(150,200),interpolation=cv2.INTER_AREA)
@@ -429,7 +432,7 @@ class OpenCvTests:
     score = raw_prediction[1][0][0]
     class_name = self.traineer.get_class_name(class_idx)
     #if(score<=0):
-    txt =  '%s with score %d, class %d' % (class_name,score,class_idx)
+    txt =  'detected %s with score %d, class %d' % (class_name , score,class_idx)
     frame = cv2.putText(frame,txt, (25,25), cv2.FONT_HERSHEY_SIMPLEX,0.7, (255,0,0), 2, cv2.LINE_AA)
     print(txt) 
   def doSaveFile(self,frame ,rect,key):
@@ -441,22 +444,44 @@ class OpenCvTests:
 def main():
 
 
-   print('my svm . \n 1 - testar . \n 2 - treinar')
+   print('my svm . \n 1 - testar . \n 2 - preparar dataset \n 3 - treinar e testar ')
    v = input()
    cv = OpenCvTests(Traineer())
-   if v=='1': 
-     cv.traineer.run()
-     img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200910_130241429_BURST000_COVER.jpg')
+   if v=='1':
+     cv.traineer.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo'
+     cv.traineer.train_or_load()
+     img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\leite_po\IMG_20200910_125946964_BURST003.jpg')
      rect = (0,0,img.shape[1],img.shape[0])
-     cv.trySVMPredict(img,rect)
+     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+     for resized in cv.traineer.pyramid(img,min_size=(200,150),max_size=(img.shape[0],img.shape[1])):
+       print(resized.shape) 
+       cv.trySVMPredict(resized,(0,0,resized.shape[1],resized.shape[0]))
      #cv.backgroundSubtractor(cv.trySVMPredict)
    elif v=='2':
      if(os.path.exists(cv.traineer.svm_fname)):
        os.remove(cv.traineer.svm_fname)
      path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
      new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
-     cv.prepareImgsForTrainning(path,new_path)
-   
+     cv.prepareImgsForTrainning(path,new_path,3,True)
+
+   elif v=='3':
+     cv.traineer.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo'
+     cv.traineer.run()
+     #img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\leite_po\IMG_20200910_125946964_BURST003.jpg')
+     #rect = (0,0,img.shape[1],img.shape[0])
+     #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+     cv.backgroundSubtractor(cv.trySVMPredict)
+     #for resized in cv.traineer.pyramid(img,min_size=(150,200),max_size=(img.shape[1],img.shape[0])):
+       #print(resized.shape) 
+       #cv.trySVMPredict(resized,(0,0,resized.shape[1],resized.shape[0]))
+   else:
+     img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_130020825_BURST002.jpg')
+     #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+     for i in range(3):
+        img = cv2.pyrDown(img)
+     x,y,w,h = cv.getBiggestCornerRect(img)
+     cv.removingBackground(img,(x,y,w,h),[0,0,0],False)
+     cv.display(img)
    
 if __name__ == '__main__':
     main()
