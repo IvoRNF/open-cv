@@ -465,15 +465,23 @@ def main():
      cv.prepareImgsForTrainning(path,new_path,3,True)
 
    elif v=='3':
-     cv.traineer.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo'
+     #cv.traineer.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo'
      cv.traineer.run()
-     #img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\leite_po\IMG_20200910_125946964_BURST003.jpg')
-     #rect = (0,0,img.shape[1],img.shape[0])
-     #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-     cv.backgroundSubtractor(cv.trySVMPredict)
-     #for resized in cv.traineer.pyramid(img,min_size=(150,200),max_size=(img.shape[1],img.shape[0])):
-       #print(resized.shape) 
-       #cv.trySVMPredict(resized,(0,0,resized.shape[1],resized.shape[0]))
+     files_to_test = [
+        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\leite_po\IMG_20200910_125946964_BURST003.jpg',
+        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\creme_leite\IMG_20200829_094657.jpg',
+        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST000_COVER.jpg',
+        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200911_071347089_BURST000_COVER.jpg'
+     ]
+     for file_name in files_to_test:
+       img = cv2.imread(file_name)
+       path_name = os.path.dirname(file_name)
+       print('folder name "%s" \n' % (os.path.basename(path_name)) )
+       rect = (0,0,img.shape[1],img.shape[0])
+       img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+       for resized in cv.traineer.pyramid(img,min_size=(150,200),max_size=(img.shape[1],img.shape[0])):
+         print(resized.shape) 
+         cv.trySVMPredict(resized,(0,0,resized.shape[1],resized.shape[0]))
    else:
      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_130020825_BURST002.jpg')
      #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
