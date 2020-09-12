@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 import os
 from object_detector_bow_svm import Traineer
+from non_max_suppression_fast import non_max_suppression_fast as nms
 
 
 class OpenCvTests:
@@ -50,45 +51,8 @@ class OpenCvTests:
      cv2.imshow('',img)
      cv2.waitKey()
      cv2.destroyAllWindows()
-     
-  def roundingCircles(self, file_name : str): 
-     planets = cv2.imread(file_name)
-     grayedImg = cv2.cvtColor(planets, cv2.COLOR_BGR2GRAY)
-     grayedImg = cv2.medianBlur(grayedImg,5)
-     circles = cv2.HoughCircles(grayedImg,cv2.HOUGH_GRADIENT, 1,120,param1=100,param2=30,minRadius=0,maxRadius=0)
-     circles = np.uint16(np.around(circles))
-     for elem in circles[0,:]: 
-        cv2.circle(planets,(elem[0],elem[1]),elem[2],(0,255,0),2)
-        cv2.circle(planets,(elem[0],elem[1]),2,(0,0,255),3)
-     cv2.imshow('Hough circles',planets)
-     cv2.waitKey()
-     cv2.destroyAllWindows()     
-  
+   
 
-
-  def removingBackgroundWathershed(self, file_name : str): 
-    img = cv2.pyrDown(  cv2.imread(file_name) )
-    gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    ret , thresh = cv2.threshold(gray,0,255,cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)
-    #remove the noise 
-    kernel = np.ones((3,3),np.uint8)
-    opening = cv2.morphologyEx(thresh,cv2.MORPH_OPEN,kernel, iterations=2)
-    #find the background
-    sure_bg = cv2.dilate(opening,kernel,iterations=3)
-    #find the foreground
-    dist_transform = cv2.distanceTransform(opening,cv2.DIST_L2,5)
-    ret , sure_fg = cv2.threshold(dist_transform, 0.7*dist_transform.max(),255,0)
-    sure_fg = sure_fg.astype(np.uint8)
-    #find the unknown region
-    unknown = cv2.subtract(sure_bg,sure_fg)
-    ret,markers = cv2.connectedComponents(sure_fg)
-    markers += 1
-    markers[unknown==255]=0
-    markers = cv2.watershed(img,markers)
-    img[markers==-1]=[255,0,0]
-    cv2.imshow(file_name , img)   
-    cv2.waitKey()
-    cv2.destroyAllWindows()
       
   def detectingFaces(self): 
     classifier = cv2.CascadeClassifier('./haarcascade_frontalface_default.xml')
@@ -102,17 +66,7 @@ class OpenCvTests:
               frame = cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
            cv2.imshow('',frame)    
     cv2.destroyAllWindows()   
-  def HarrisFeatureDetection(self,file_name : str):
-    img = cv2.pyrDown( cv2.imread(file_name) )
-    for i in range(2):
-      img = cv2.pyrDown( img )
-    grayed = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-    grayed = np.float32(grayed)
-    dest = cv2.cornerHarris(grayed,5,3,0.04)
-    img[dest>0.01*dest.max()]=[0,255,0]
-    cv2.imshow(file_name,img)
-    cv2.waitKey()
-    cv2.destroyAllWindows()
+
 
   def trackObject(self):
     
@@ -175,7 +129,7 @@ class OpenCvTests:
       
       k = cv2.waitKey(30)
       if callback is not None:
-        rect = (x,y,w,h) 
+        rect = (x,y,w,h)
         callback(frame,rect,k)
       else:
         cv2.rectangle(frame,(x,y),(x+w,y+h),(255,255,0),2)
@@ -414,16 +368,15 @@ class OpenCvTests:
              os.makedirs(directory)
           cv2.imwrite(new_fname,img)
 
-  def trySVMPredict(self,frame ,rect,key = None):
+  def trySVMPredict(self,img_,rect,key):
+
+    img = img_.copy()
+    if(len(img.shape) > 2):
+      img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     x,y,w,h = rect
-    roi = frame[y:y+h,x:x+w]
-    #roi = cv2.resize(roi,(200,200),interpolation=cv2.INTER_AREA)
-    if(len(roi.shape) > 2):
-      roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY)
-    #pyrlevel = 0
-    #for resized_img in self.traineer.pyramid(roi,max_size=(600,600)):
-    #pyrlevel = pyrlevel + 1
-    descriptors = self.traineer.extract_bow_descriptors(roi)
+    resized = img[y:y+h,x:x+w]
+    resized = cv2.resize(resized,(150,200),interpolation=cv2.INTER_AREA)
+    descriptors = self.traineer.extract_bow_descriptors(resized)
     if descriptors is None:
        return                   
     prediction = self.traineer.svm.predict(descriptors)
@@ -431,10 +384,10 @@ class OpenCvTests:
     raw_prediction = self.traineer.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
     score = raw_prediction[1][0][0]
     class_name = self.traineer.get_class_name(class_idx)
-    #if(score<=0):
-    txt =  'detected %s with score %d, class %d' % (class_name , score,class_idx)
-    frame = cv2.putText(frame,txt, (25,25), cv2.FONT_HERSHEY_SIMPLEX,0.7, (255,0,0), 2, cv2.LINE_AA)
-    print(txt) 
+    #if(score >= self.traineer.SVM_SCORE_THRESHOLD):
+    cv2.putText(img_,'%s(%d)' % (class_name,score), (x,y), cv2.FONT_HERSHEY_SIMPLEX, 2, 255)
+    cv2.rectangle(img_,(x,y),(w,h),(0,255,0),2)
+   
   def doSaveFile(self,frame ,rect,key):
     if key == ord('s'):
       x,y,w,h = rect
@@ -451,11 +404,10 @@ def main():
      cv.traineer.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo'
      cv.traineer.train_or_load()
      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\leite_po\IMG_20200910_125946964_BURST003.jpg')
-     rect = (0,0,img.shape[1],img.shape[0])
      img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
      for resized in cv.traineer.pyramid(img,min_size=(200,150),max_size=(img.shape[0],img.shape[1])):
        print(resized.shape) 
-       cv.trySVMPredict(resized,(0,0,resized.shape[1],resized.shape[0]))
+       cv.trySVMPredict(resized,img)
      #cv.backgroundSubtractor(cv.trySVMPredict)
    elif v=='2':
      if(os.path.exists(cv.traineer.svm_fname)):
@@ -470,26 +422,40 @@ def main():
      files_to_test = [
         r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\leite_po\IMG_20200910_125946964_BURST003.jpg',
         r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\creme_leite\IMG_20200829_094657.jpg',
-        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST000_COVER.jpg',
-        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200911_071347089_BURST000_COVER.jpg'
+        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\creme_leite\IMG_20200831_080644.jpg',
+        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite\IMG_20200829_094657.jpg'
      ]
+
+     cv.backgroundSubtractor(cv.trySVMPredict)
+     return
      for file_name in files_to_test:
        img = cv2.imread(file_name)
        path_name = os.path.dirname(file_name)
-       print('folder name "%s" \n' % (os.path.basename(path_name)) )
-       rect = (0,0,img.shape[1],img.shape[0])
+       #print('folder name "%s" \n' % (os.path.basename(path_name)) )
        img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-       for resized in cv.traineer.pyramid(img,min_size=(150,200),max_size=(img.shape[1],img.shape[0])):
-         print(resized.shape) 
-         cv.trySVMPredict(resized,(0,0,resized.shape[1],resized.shape[0]))
+       cv.trySVMPredict(img,None,None)
    else:
-     img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_130020825_BURST002.jpg')
+     #img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_130020825_BURST002.jpg')
      #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-     for i in range(3):
-        img = cv2.pyrDown(img)
-     x,y,w,h = cv.getBiggestCornerRect(img)
-     cv.removingBackground(img,(x,y,w,h),[0,0,0],False)
-     cv.display(img)
+     #for i in range(3):
+       # img = cv2.pyrDown(img)
+     #x,y,w,h = cv.getBiggestCornerRect(img)
+     #cv.removingBackground(img,(x,y,w,h),[0,0,0],False)
+
+     cv.backgroundSubtractor( cv.trySVMPredict )
+     return
+     cam= cv2.VideoCapture(0)
+
+     while(True):
+       sucess,frame = cam.read()
+       rect = cv.getBiggestContourRect(frame)
+       x,y,w,h = rect
+       cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+       cv2.imshow('',frame)
+       k = cv2.waitKey(30)
+       if k == 27:
+         break
+     cv2.destroyAllWindows()
    
 if __name__ == '__main__':
     main()

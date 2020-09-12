@@ -9,7 +9,7 @@ class Traineer:
       self.is_test = os.path.exists(self.svm_fname)
       self.sift = cv2.xfeatures2d.SIFT_create()
       self.FLANN_INDEX_KDTREE = 1
-      self.SVM_SCORE_THRESHOLD = 3
+      self.SVM_SCORE_THRESHOLD = 0
       self.flann = cv2.FlannBasedMatcher(
         dict(algorithm=self.FLANN_INDEX_KDTREE,trees=5),{})
       self.num_clusters = 12
@@ -87,8 +87,8 @@ class Traineer:
       else:
         self.svm = cv2.ml.SVM_create()
         self.svm.setType(cv2.ml.SVM_C_SVC)
-        self.svm.setC(40)
-        self.svm.setGamma(0.2)
+        self.svm.setC(50)
+        self.svm.setGamma(0.5)
         self.svm.setKernel(cv2.ml.SVM_RBF)
 
         self.svm.train(np.array(self.training_data), cv2.ml.ROW_SAMPLE,
@@ -113,6 +113,17 @@ class Traineer:
          w /= scale_factor
          h /= scale_factor
          img = cv2.resize(img, (int(w), int(h)),interpolation=cv2.INTER_AREA)   
+
+   def sliding_window(self,img, step=20, window_size=(100, 40)):
+       img_h, img_w = img.shape
+       window_w, window_h = window_size
+       for y in range(0, img_w, step):
+          for x in range(0, img_h, step):
+            roi = img[y:y+window_h, x:x+window_w]
+            roi_h, roi_w = roi.shape
+            if roi_w == window_w and roi_h == window_h:
+               yield (x, y, roi)
+
    def test(self):
 
       img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200826_134116.jpg')
