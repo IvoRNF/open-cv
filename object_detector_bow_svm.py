@@ -9,10 +9,10 @@ class Traineer:
       self.is_test = os.path.exists(self.svm_fname)
       self.sift = cv2.xfeatures2d.SIFT_create()
       self.FLANN_INDEX_KDTREE = 1
-      self.SVM_SCORE_THRESHOLD = 0
+      self.SVM_SCORE_THRESHOLD = 1
       self.flann = cv2.FlannBasedMatcher(
         dict(algorithm=self.FLANN_INDEX_KDTREE,trees=5),{})
-      self.num_clusters = 12
+      self.num_clusters = 24
       self.bow_kmeans_trainer = cv2.BOWKMeansTrainer( self.num_clusters )  
       self.bow_extractor = cv2.BOWImgDescriptorExtractor(self.sift,self.flann)
       self.files = []

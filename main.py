@@ -343,24 +343,28 @@ class OpenCvTests:
           mask[i,j] = cv2.GC_BGD 
     cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
     img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor  
-  def prepareImgsForTrainning(self,path : str , new_path : str, pyr_down_iterations = 3, removeBackground=True):
+  def prepareImgsForTrainning(self,path : str , new_path : str, pyr_down_iterations = 3, removeBackground=True,onlyNewFiles = True):
     for root,dirs,files in os.walk(path):
         for name in files:
           basename = os.path.basename(root)
           fullfname = os.path.join(root,name)
+          new_fname = os.path.join(basename , name)
+          new_fname = os.path.join(new_path , new_fname)
+          if onlyNewFiles:
+            if os.path.exists(new_fname):
+              continue
           img = cv2.imread(fullfname)
           if(img.shape[0] < img.shape[1]): 
             img = cv2.rotate(img, cv2.cv2.ROTATE_90_CLOCKWISE)
           for i in range(pyr_down_iterations):
             img = cv2.pyrDown(img)
-          x,y,w,h = self.getBiggestCornerRect(img)
+          #x,y,w,h = self.getBiggestCornerRect(img)
+          x,y,w,h = self.getBiggestContourRect(img)
           if(removeBackground):
             self.removingBackground(img,(x,y,w,h),[0,0,0])
-          #x,y,w,h = self.getBiggestContourRect(img)
           img_roi = img[y:y+h,x:x+w]
           img = cv2.resize(img_roi,(150,200),interpolation=cv2.INTER_AREA)
-          new_fname = os.path.join(basename , name)
-          new_fname = os.path.join(new_path , new_fname)
+          
           #cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
           print('writing %s ' % (new_fname))
           directory = os.path.dirname(new_fname)
@@ -382,11 +386,12 @@ class OpenCvTests:
     prediction = self.traineer.svm.predict(descriptors)
     class_idx = int(prediction[1][0][0])
     raw_prediction = self.traineer.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
-    score = raw_prediction[1][0][0]
+    score = -raw_prediction[1][0][0]
     class_name = self.traineer.get_class_name(class_idx)
-    #if(score >= self.traineer.SVM_SCORE_THRESHOLD):
-    cv2.putText(img_,'%s(%d)' % (class_name,score), (x,y), cv2.FONT_HERSHEY_SIMPLEX, 2, 255)
-    cv2.rectangle(img_,(x,y),(w,h),(0,255,0),2)
+    print('%s(%d)' % (class_name,raw_prediction[1][0][0]))
+    if(score >= self.traineer.SVM_SCORE_THRESHOLD):
+      cv2.putText(img_,'%s(%d)' % (class_name,score), (x,y), cv2.FONT_HERSHEY_SIMPLEX, 2, 255)
+      cv2.rectangle(img_,(x,y),(w,h),(0,255,0),2)
    
   def doSaveFile(self,frame ,rect,key):
     if key == ord('s'):
@@ -401,13 +406,19 @@ def main():
    v = input()
    cv = OpenCvTests(Traineer())
    if v=='1':
-     cv.traineer.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo'
-     cv.traineer.train_or_load()
-     img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\leite_po\IMG_20200910_125946964_BURST003.jpg')
-     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-     for resized in cv.traineer.pyramid(img,min_size=(200,150),max_size=(img.shape[0],img.shape[1])):
-       print(resized.shape) 
-       cv.trySVMPredict(resized,img)
+     cv.traineer.run()
+     files = [
+          r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST002.jpg',
+          r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200829_094657.jpg'
+          
+       ]
+     for f in files:
+       img_ = cv2.imread(f)
+       img_ = cv2.cvtColor(img_, cv2.COLOR_BGR2GRAY)
+       print('... %s' % (os.path.basename(f)))
+       for img in cv.traineer.pyramid(img_,min_size=(150,200),max_size=img_.shape): 
+         cv.trySVMPredict(img,(0,0,img.shape[1],img.shape[0]),None)
+       #cv.display(img)
      #cv.backgroundSubtractor(cv.trySVMPredict)
    elif v=='2':
      if(os.path.exists(cv.traineer.svm_fname)):
@@ -417,23 +428,8 @@ def main():
      cv.prepareImgsForTrainning(path,new_path,3,True)
 
    elif v=='3':
-     #cv.traineer.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo'
      cv.traineer.run()
-     files_to_test = [
-        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\leite_po\IMG_20200910_125946964_BURST003.jpg',
-        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\creme_leite\IMG_20200829_094657.jpg',
-        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_com_fundo\creme_leite\IMG_20200831_080644.jpg',
-        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite\IMG_20200829_094657.jpg'
-     ]
-
      cv.backgroundSubtractor(cv.trySVMPredict)
-     return
-     for file_name in files_to_test:
-       img = cv2.imread(file_name)
-       path_name = os.path.dirname(file_name)
-       #print('folder name "%s" \n' % (os.path.basename(path_name)) )
-       img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-       cv.trySVMPredict(img,None,None)
    else:
      #img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_130020825_BURST002.jpg')
      #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
