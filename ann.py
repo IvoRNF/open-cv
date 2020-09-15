@@ -14,8 +14,10 @@ class TraineerAnn:
       self.default_img_width = 150
       self.default_img_height = 200
       self.input_layer_size = self.default_img_width * self.default_img_height
+      self.loaded = False
       if(os.path.exists(self.ann_fname)):
-        self.ann = cv2.ml.ANN_MLP_load()
+        self.ann = cv2.ml.ANN_MLP_load(self.ann_fname)
+        self.loaded = True
         print('loaded ann from file')
       else:
          self.createAnn()
@@ -25,8 +27,9 @@ class TraineerAnn:
       self.ann.setActivationFunction(cv2.ml.ANN_MLP_BACKPROP,0.1,0.1)
       self.ann.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER | cv2.TERM_CRITERIA_EPS,100,1.0))
    def run(self):
-      self.load_files()
-      self.train()
+      if not self.loaded:
+        self.load_files() 
+        self.train()
    def load_files(self):          
       i = 0
       for root,dirs,files in os.walk(self.dirToWalk):
@@ -53,10 +56,10 @@ class TraineerAnn:
    def predict(self,img : np.ndarray):
       sample = img.copy()
       shape = (self.default_img_height,self.default_img_width)
-      if sample.shape != (self.self.input_layer_size,):
+      if sample.shape != (self.input_layer_size,):
          if sample.shape != shape:
-             sample = cv2.resize(sample,siz,interpolation=cv2.INTER_LINEAR)
-         sample = sample.reshape(self.self.input_layer_size)
+             sample = cv2.resize(sample,shape,interpolation=cv2.INTER_LINEAR)
+         sample = sample.reshape(self.input_layer_size)
       return self.ann.predict(np.array([sample],dtype=np.float32))   
    def train(self,epochs=1):
        classes = {
@@ -97,9 +100,19 @@ class TraineerAnn:
       
           
 if __name__ == '__main__':
-   trainner = TraineerAnn()    
-   trainner.run()  
-
+   ann = TraineerAnn()    
+   ann.run()
+   files_to_test = [
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200914_080715874_BURST008.jpg',
+       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200829_094657.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals_excluded\fermento\IMG_20200829_094931.jpg'
+   ]
+   for fname in files_to_test:
+     img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
+     dname = os.path.dirname(fname)
+     base = os.path.basename(dname)
+     print( 'arquivo da pasta %s \n' % (base) )
+     print(ann.predict(img))
 
 
 
