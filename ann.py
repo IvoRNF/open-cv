@@ -61,29 +61,30 @@ class TraineerAnn:
              sample = cv2.resize(sample,shape,interpolation=cv2.INTER_LINEAR)
          sample = sample.reshape(self.input_layer_size)
       return self.ann.predict(np.array([sample],dtype=np.float32))   
-   def train(self,epochs=1):
+   def train(self,epochs=3):
        classes = {
            0:[0,0],
            1:[0,1]
        }
-       for row in self.files:
-          for file_name in row['imgs_per_class']:
-             print(file_name)
-             img = cv2.imread(file_name,cv2.IMREAD_GRAYSCALE)
-             img = img.astype(np.float32)
-             class_idx = row['index']
-             response = np.array([classes[class_idx]],dtype=np.float32)
-             img = img.reshape(img.size)
-             img = np.array([img],dtype=np.float32)
-             data = cv2.ml.TrainData_create(img,cv2.ml.ROW_SAMPLE,response)
-             if self.ann.isTrained():
-                self.ann.train(data,
+       for epoch in range(epochs):
+          for row in self.files:
+            for file_name in row['imgs_per_class']:
+               print('training %d ...' % (epoch))
+               img = cv2.imread(file_name,cv2.IMREAD_GRAYSCALE)
+               img = img.astype(np.float32)
+               class_idx = row['index']
+               response = np.array([classes[class_idx]],dtype=np.float32)
+               img = img.reshape(img.size)
+               img = np.array([img],dtype=np.float32)
+               data = cv2.ml.TrainData_create(img,cv2.ml.ROW_SAMPLE,response)
+               if self.ann.isTrained():
+                   self.ann.train(data,
                           cv2.ml.ANN_MLP_UPDATE_WEIGHTS |
                           cv2.ml.ANN_MLP_NO_INPUT_SCALE |
                           cv2.ml.ANN_MLP_NO_OUTPUT_SCALE
                           )
-             else:
-                self.ann.train(data,
+               else:
+                   self.ann.train(data,
                           cv2.ml.ANN_MLP_NO_INPUT_SCALE |
                           cv2.ml.ANN_MLP_NO_OUTPUT_SCALE
                           )
