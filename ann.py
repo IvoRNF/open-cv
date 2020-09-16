@@ -5,15 +5,15 @@ import os
 class TraineerAnn:
 
    def __init__(self):
-      self.ann_fname = './my_ann.xml'
+      self.ann_fname = './anns/my_ann.xml'
       self.files = []
       self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
       self.training_data = []
       self.training_labels = []
-      self.hidden_nodes_size = 90
+      self.hidden_nodes_size = 16
       self.default_img_width = 150
       self.default_img_height = 200
-      self.epochs=1
+      self.epochs=3
       self.input_layer_size = self.default_img_width * self.default_img_height
       self.loaded = False
       if(os.path.exists(self.ann_fname)):
@@ -109,8 +109,16 @@ if __name__ == '__main__':
        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200829_094657.jpg',
        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200910_125946964_BURST009.jpg'
    ]
+   '''fname = files_to_test[0]
+   img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
+   while True:
+     cv2.imshow('',img)
+     k = cv2.waitKey(30)
+     if k == 127:
+        break
+   cv2.destroyAllWindows()   '''
    for fname in files_to_test:
-     img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
+     img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE) 
      dname = os.path.dirname(fname)
      base = os.path.basename(dname)
      print( 'arquivo da pasta %s \n' % (base) )
