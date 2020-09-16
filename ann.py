@@ -10,10 +10,10 @@ class TraineerAnn:
       self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
       self.training_data = []
       self.training_labels = []
-      self.hidden_nodes_size = 16
+      self.hidden_nodes_size = 50
       self.default_img_width = 150
       self.default_img_height = 200
-      self.epochs=3
+      self.epochs=1
       self.input_layer_size = self.default_img_width * self.default_img_height
       self.loaded = False
       if(os.path.exists(self.ann_fname)):
@@ -105,7 +105,13 @@ if __name__ == '__main__':
    ann = TraineerAnn()    
    files_to_test = [
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\100.jpg',
-       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\181.jpg'
+       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\181.jpg',
+       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200831_080647.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\189.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals_excluded\fermento\IMG_20200829_094931.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\133.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\159.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\IMG_20200907_144559785_BURST036.jpg'
    ]
    ann.run()
    '''

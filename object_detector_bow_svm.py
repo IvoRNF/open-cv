@@ -16,7 +16,7 @@ class Traineer:
       self.bow_kmeans_trainer = cv2.BOWKMeansTrainer( self.num_clusters )  
       self.bow_extractor = cv2.BOWImgDescriptorExtractor(self.sift,self.flann)
       self.files = []
-      self.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
+      self.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
       self.training_data = []
       self.training_labels = []
       self.svm = None
@@ -126,14 +126,18 @@ class Traineer:
 
    def test(self):
 
-      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200826_134116.jpg')
-      gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-
+     
       max_score = -1
       prediction_class_idx = -1
       pyrlevel = 0
       max_score_pyrlevel = -1
-      for resized_img in self.pyramid(gray_img,max_size=gray_img.shape):
+      imgs = [
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\126.jpg',
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\182.jpg'  ,
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\IMG_20200907_144559785_BURST029.jpg'
+      ]
+      for fname in imgs:
+          resized_img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
           pyrlevel = pyrlevel + 1
           descriptors = self.extract_bow_descriptors(resized_img)
           if descriptors is None:
@@ -142,7 +146,9 @@ class Traineer:
           class_idx = int(prediction[1][0][0])
           raw_prediction = self.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
           score = raw_prediction[1][0][0]
-          print('score %d at %d level, class %s' % (score,pyrlevel,self.get_class_name(class_idx))) 
+          path = os.path.dirname(fname)
+          base = os.path.basename(path)
+          print('score %d at %d level, class %s folder %s' % (score,pyrlevel,self.get_class_name(class_idx),base)) 
           if score > max_score:
               max_score = score
               max_score_pyrlevel = pyrlevel
