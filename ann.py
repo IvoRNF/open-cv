@@ -7,7 +7,7 @@ class TraineerAnn:
    def __init__(self):
       self.ann_fname = './my_ann.xml'
       self.files = []
-      self.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
+      self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
       self.training_data = []
       self.training_labels = []
       self.hidden_nodes_size = 50
@@ -32,7 +32,7 @@ class TraineerAnn:
         self.train()
    def load_files(self):          
       i = 0
-      for root,dirs,files in os.walk(self.dirToWalk):
+      for root,dirs,files in os.walk(self.dir_to_walk):
           for name in files:
             basename = os.path.basename(root)
             y = self.files_contains_class_name_index_of(basename)
@@ -59,9 +59,9 @@ class TraineerAnn:
       if sample.shape != (self.input_layer_size,):
          if sample.shape != shape:
              sample = cv2.resize(sample,shape,interpolation=cv2.INTER_LINEAR)
-         sample = sample.reshape(self.input_layer_size)
+         sample = np.ravel(sample)
       return self.ann.predict(np.array([sample],dtype=np.float32))   
-   def train(self,epochs=3):
+   def train(self,epochs=1):
        classes = {
            0:[0,0],
            1:[0,1]
@@ -74,7 +74,7 @@ class TraineerAnn:
                img = img.astype(np.float32)
                class_idx = row['index']
                response = np.array([classes[class_idx]],dtype=np.float32)
-               img = img.reshape(img.size)
+               img = np.ravel(img)
                img = np.array([img],dtype=np.float32)
                data = cv2.ml.TrainData_create(img,cv2.ml.ROW_SAMPLE,response)
                if self.ann.isTrained():
@@ -106,7 +106,9 @@ if __name__ == '__main__':
    files_to_test = [
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200914_080715874_BURST008.jpg',
        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200829_094657.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals_excluded\fermento\IMG_20200829_094931.jpg'
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals_excluded\fermento\IMG_20200829_094931.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200829_094657.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST000_COVER.jpg'
    ]
    for fname in files_to_test:
      img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
