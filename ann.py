@@ -10,9 +10,10 @@ class TraineerAnn:
       self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
       self.training_data = []
       self.training_labels = []
-      self.hidden_nodes_size = 50
+      self.hidden_nodes_size = 90
       self.default_img_width = 150
       self.default_img_height = 200
+      self.epochs=1
       self.input_layer_size = self.default_img_width * self.default_img_height
       self.loaded = False
       if(os.path.exists(self.ann_fname)):
@@ -61,12 +62,12 @@ class TraineerAnn:
              sample = cv2.resize(sample,shape,interpolation=cv2.INTER_LINEAR)
          sample = np.ravel(sample)
       return self.ann.predict(np.array([sample],dtype=np.float32))   
-   def train(self,epochs=1):
+   def train(self):
        classes = {
            0:[0,0],
            1:[0,1]
        }
-       for epoch in range(epochs):
+       for epoch in range(self.epochs):
           for row in self.files:
             for file_name in row['imgs_per_class']:
                print('training %d ...' % (epoch))
@@ -106,9 +107,7 @@ if __name__ == '__main__':
    files_to_test = [
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200914_080715874_BURST008.jpg',
        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200829_094657.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals_excluded\fermento\IMG_20200829_094931.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200829_094657.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST000_COVER.jpg'
+       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200910_125946964_BURST009.jpg'
    ]
    for fname in files_to_test:
      img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
