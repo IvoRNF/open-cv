@@ -7,7 +7,7 @@ class TraineerAnn:
    def __init__(self):
       self.ann_fname = './anns/my_ann.xml'
       self.files = []
-      self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
+      self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
       self.training_data = []
       self.training_labels = []
       self.hidden_nodes_size = 16
@@ -59,7 +59,7 @@ class TraineerAnn:
       shape = (self.default_img_height,self.default_img_width)
       if sample.shape != (self.input_layer_size,):
          if sample.shape != shape:
-             sample = cv2.resize(sample,shape,interpolation=cv2.INTER_LINEAR)
+             sample = cv2.resize(sample,shape,interpolation=cv2.INTER_AREA)
          sample = np.ravel(sample)
       return self.ann.predict(np.array([sample],dtype=np.float32))   
    def train(self):
@@ -103,19 +103,41 @@ class TraineerAnn:
           
 if __name__ == '__main__':
    ann = TraineerAnn()    
-   ann.run()
    files_to_test = [
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200914_080715874_BURST008.jpg',
-       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200829_094657.jpg',
-       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200910_125946964_BURST009.jpg'
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\100.jpg',
+       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\181.jpg'
    ]
-   '''fname = files_to_test[0]
-   img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
-   while True:
-     cv2.imshow('',img)
+   ann.run()
+   '''
+   capture = cv2.VideoCapture(0)
+   sucess,frame = capture.read()
+   roi_width = int(frame.shape[1] * 0.5)
+   roi_height = int(frame.shape[0] * 0.5)
+   middle_w = int(frame.shape[1]/2)
+   middle_h = int(frame.shape[0]/2)
+   x = middle_w - int(roi_width / 2)
+   y = middle_h - int(roi_height / 2)
+   i = 0
+   while (sucess): 
+     cv2.rectangle(frame,(x,y),(x+roi_height,y+roi_width),(0,255,0),1) #inverte em paisagem
+     cv2.imshow('',frame)
      k = cv2.waitKey(30)
-     if k == 127:
+     if k == ord('f'):
         break
+     gap = 10 
+     if k == ord('l'): #salva foto de leite lata
+        i = i + 1
+        roi = frame[y:y+roi_width-gap,x:x+roi_height-gap]
+        roi = cv2.resize(roi,(150,200),interpolation=cv2.INTER_AREA)
+        cv2.imwrite('./datasets/captures/leite_lata/%d.jpg'%(i),roi)
+     if k == ord('c'): #salva foto de leite caixa
+        i = i + 1
+        roi = frame[y:y+roi_width-gap,x:x+roi_height-gap]
+        roi = cv2.resize(roi,(150,200),interpolation=cv2.INTER_AREA)
+        cv2.imwrite('./datasets/captures/leite_caixa/%d.jpg'%(i),roi)
+        
+     sucess,frame = capture.read() 
+   capture.release()   
    cv2.destroyAllWindows()   '''
    for fname in files_to_test:
      img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE) 
