@@ -99,9 +99,7 @@ class TraineerAnn:
 
   
 
-      
-          
-if __name__ == '__main__':
+def test():
    ann = TraineerAnn()    
    files_to_test = [
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\100.jpg',
@@ -114,7 +112,13 @@ if __name__ == '__main__':
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\IMG_20200907_144559785_BURST036.jpg'
    ]
    ann.run()
-   '''
+   for fname in files_to_test:
+     img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE) 
+     dname = os.path.dirname(fname)
+     base = os.path.basename(dname)
+     print( 'arquivo da pasta %s \n' % (base) )
+     print(ann.predict(img))
+def capture():
    capture = cv2.VideoCapture(0)
    sucess,frame = capture.read()
    roi_width = int(frame.shape[1] * 0.5)
@@ -144,13 +148,18 @@ if __name__ == '__main__':
         
      sucess,frame = capture.read() 
    capture.release()   
-   cv2.destroyAllWindows()   '''
-   for fname in files_to_test:
-     img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE) 
-     dname = os.path.dirname(fname)
-     base = os.path.basename(dname)
-     print( 'arquivo da pasta %s \n' % (base) )
-     print(ann.predict(img))
+   cv2.destroyAllWindows()
+   
+if __name__ == '__main__':
+   print('1 para capturar\n2 para testar. ')
+   v = input()
+   if v=='1':
+      capture()
+   elif v=='2':
+      test()
+   
+     
+   
 
 
 
