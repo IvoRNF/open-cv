@@ -10,7 +10,7 @@ class TraineerAnn:
       self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
       self.training_data = []
       self.training_labels = []
-      self.hidden_nodes_size = 50
+      self.hidden_nodes_size = 75
       self.default_img_width = 150
       self.default_img_height = 200
       self.epochs=1
@@ -97,19 +97,47 @@ class TraineerAnn:
    def get_class_name(self,index : int):
         return self.files[index]['class_name']
 
+   
   
+def real_time_test():
+   ann = TraineerAnn()
+   ann.run()
+   capture = cv2.VideoCapture(0)
+   sucess,frame = capture.read()
+   roi_width = int(frame.shape[1] * 0.5)
+   roi_height = int(frame.shape[0] * 0.5)
+   middle_w = int(frame.shape[1]/2)
+   middle_h = int(frame.shape[0]/2)
+   x = middle_w - int(roi_width / 2)
+   y = middle_h - int(roi_height / 2)
+
+   while (sucess):
+     frame_cpy = frame.copy() 
+     cv2.rectangle(frame_cpy,(x,y),(x+roi_height,y+roi_width),(0,255,0),1) #inverte em paisagem
+     cv2.imshow('',frame_cpy)
+     frame_cpy = None
+     k = cv2.waitKey(30)
+     if k == ord('f'):
+        break
+     if k == ord('p'): 
+       gap = 10 
+       roi = frame[y:y+roi_width-gap,x:x+roi_height-gap]
+       roi = cv2.cvtColor(roi,cv2.COLOR_BGR2GRAY)
+       roi = cv2.resize(roi,(150,200),interpolation=cv2.INTER_AREA)
+       print(ann.predict(roi))
+     sucess,frame = capture.read() 
+   capture.release()   
+   cv2.destroyAllWindows()
 
 def test():
    ann = TraineerAnn()    
    files_to_test = [
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\100.jpg',
        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\181.jpg',
-       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200831_080647.jpg',
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\189.jpg',
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals_excluded\fermento\IMG_20200829_094931.jpg',
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\133.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\159.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\IMG_20200907_144559785_BURST036.jpg'
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\159.jpg'
    ]
    ann.run()
    for fname in files_to_test:
@@ -127,10 +155,12 @@ def capture():
    middle_h = int(frame.shape[0]/2)
    x = middle_w - int(roi_width / 2)
    y = middle_h - int(roi_height / 2)
-   i = 0
-   while (sucess): 
-     cv2.rectangle(frame,(x,y),(x+roi_height,y+roi_width),(0,255,0),1) #inverte em paisagem
-     cv2.imshow('',frame)
+   i = 1000
+   while (sucess):
+     frame_cpy = frame.copy() 
+     cv2.rectangle(frame_cpy,(x,y),(x+roi_height,y+roi_width),(0,255,0),1) #inverte em paisagem
+     cv2.imshow('',frame_cpy)
+     frame_cpy = None
      k = cv2.waitKey(30)
      if k == ord('f'):
         break
@@ -151,12 +181,14 @@ def capture():
    cv2.destroyAllWindows()
    
 if __name__ == '__main__':
-   print('1 para capturar\n2 para testar. ')
+   print('1 para capturar\n2 para testar.\n3 para test realtime ')
    v = input()
    if v=='1':
       capture()
    elif v=='2':
       test()
+   elif v=='3':
+     real_time_test() 
    
      
    

@@ -37,8 +37,12 @@ class Traineer:
             if (y == -1):
               y = len(self.files)   
               self.files.append({"index":i,"imgs_per_class":[],"class_name":basename})
-              i += 1 
+              i += 1
             row = self.files[y]
+            #if(basename == 'leite_lata' ):
+               #if len(row['imgs_per_class']) == 1:
+                 # continue
+            
             files_per_class = row["imgs_per_class"]
             files_per_class.append(os.path.join(root,name))
 
@@ -123,10 +127,35 @@ class Traineer:
             roi_h, roi_w = roi.shape
             if roi_w == window_w and roi_h == window_h:
                yield (x, y, roi)
+   def my_sliding_window(self,img : np.ndarray):
 
+      result = []  
+      h,w = img.shape[:2]
+      roi_w = middle_w = int(w/2)
+      roi_h = middle_h = int(h/2)
+      x = y = 0  
+      result.append((x,y,roi_w,roi_h))
+      x += roi_w
+      result.append((x,y,roi_w,roi_h))
+      y += roi_h
+      x = 0
+      result.append((x,y,roi_w,roi_h))
+      x += roi_w 
+      result.append((x,y,roi_w,roi_h))
+
+      x = int(roi_w/2)
+      y = int(roi_h/2)
+      result.append((x,y,roi_w,roi_h))
+      x = 0
+      result.append((x,y,roi_w,roi_h))
+      x = roi_w
+      result.append((x,y,roi_w,roi_h))
+      return result
+      
+      
    def test(self):
 
-     
+      #print(self.files)
       max_score = -1
       prediction_class_idx = -1
       pyrlevel = 0
@@ -134,7 +163,8 @@ class Traineer:
       imgs = [
             r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\126.jpg',
             r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\182.jpg'  ,
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\IMG_20200907_144559785_BURST029.jpg'
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\111.jpg',
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\330.jpg'
       ]
       for fname in imgs:
           resized_img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
@@ -155,11 +185,46 @@ class Traineer:
               prediction_class_idx = class_idx
       
       #5print( 'encontrou %s com score %d no level %d da piramide' % (self.get_class_name(prediction_class_idx),max_score,max_score_pyrlevel) )
-          
+   def capture(self):
+     capture = cv2.VideoCapture(0)
+     sucess,frame = capture.read()
+     rects = self.my_sliding_window(frame)
+     i = 0
+     len_rects = len(rects)
+     while (sucess):
+        frame_cpy = frame.copy()
+        if(i==len_rects):
+          i=0
+        rect = rects[i]
+        x,y,w,h = rect
+        '''gray = cv2.cvtColor(frame_cpy[y:y+h,x:x+w],cv2.COLOR_BGR2GRAY)
+        descriptors = self.extract_bow_descriptors(gray)
+        if descriptors is not None:
+                 
+          prediction = self.svm.predict(descriptors)
+          class_idx = int(prediction[1][0][0])
+          raw_prediction = self.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
+          score = -raw_prediction[1][0][0]
+          if score >=1:  
+            cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
+          else:
+            i += 1 
+        else:
+           i += 1 '''
+        cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
+        i+=1
+        cv2.imshow('',frame)
+        frame_cpy = None
+        k = cv2.waitKey(300)
+        if k == ord('f'):
+           break
+        sucess,frame = capture.read() 
+     capture.release()   
+     cv2.destroyAllWindows()          
 if __name__ == '__main__':
-   trainner = Traineer()    
-   trainner.run()
-   trainner.test()  
+   traineer = Traineer()
+   #traineer.run()
+   traineer.capture()  
 
 
 
