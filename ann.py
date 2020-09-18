@@ -7,13 +7,13 @@ class TraineerAnn:
    def __init__(self):
       self.ann_fname = './anns/my_ann.xml'
       self.files = []
-      self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
+      self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_thresh'
       self.training_data = []
       self.training_labels = []
-      self.hidden_nodes_size = 75
+      self.hidden_nodes_size = 50
       self.default_img_width = 150
       self.default_img_height = 200
-      self.epochs=1
+      self.epochs=10
       self.input_layer_size = self.default_img_width * self.default_img_height
       self.loaded = False
       if(os.path.exists(self.ann_fname)):
@@ -141,7 +141,8 @@ def test():
    ]
    ann.run()
    for fname in files_to_test:
-     img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE) 
+     img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
+     img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
      dname = os.path.dirname(fname)
      base = os.path.basename(dname)
      print( 'arquivo da pasta %s \n' % (base) )
@@ -176,9 +177,35 @@ def capture():
         roi = cv2.resize(roi,(150,200),interpolation=cv2.INTER_AREA)
         cv2.imwrite('./datasets/captures/leite_caixa/%d.jpg'%(i),roi)
         
-     sucess,frame = capture.read() 
+     sucess,frame = capture.read()     
    capture.release()   
    cv2.destroyAllWindows()
+def createLetterImg(letter : str):
+      w = 200
+      h = 150
+      img = np.zeros((h,w))
+      middle_w = int(w/2)
+      x = middle_w - 40
+      middle_h = int(h/2)
+      y = middle_h + 40
+      txt = letter
+      size = len(txt)
+      cv2.putText(img,txt,(x,y),cv2.FONT_HERSHEY_SIMPLEX,5,(255,255,255),2)
+      return img
+
+def createLettersDataset(dir_to_save:str,samples_per_class=3):
+   for i in range(ord('A'),ord('Z')+1):
+      letter = chr(i)
+      img = createLetterImg(letter)
+      for j in range(samples_per_class):
+         fname = os.path.join(dir_to_save,letter)
+         directory = fname
+         if not os.path.exists(directory):
+             os.makedirs(directory)
+         fname = os.path.join(directory,'%d.jpg' %(j))
+         print('writing.. %s\n' % (fname))
+         cv2.imwrite(fname,img)
+   print('fim') 
    
 if __name__ == '__main__':
    print('1 para capturar\n2 para testar.\n3 para test realtime ')
@@ -189,9 +216,6 @@ if __name__ == '__main__':
       test()
    elif v=='3':
      real_time_test() 
-   
-     
-   
-
-
+   else :
+      createLettersDataset(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters',50,)    
 

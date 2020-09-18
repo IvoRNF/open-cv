@@ -16,7 +16,7 @@ class Traineer:
       self.bow_kmeans_trainer = cv2.BOWKMeansTrainer( self.num_clusters )  
       self.bow_extractor = cv2.BOWImgDescriptorExtractor(self.sift,self.flann)
       self.files = []
-      self.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
+      self.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_thresh'
       self.training_data = []
       self.training_labels = []
       self.svm = None
@@ -168,6 +168,7 @@ class Traineer:
       ]
       for fname in imgs:
           resized_img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
+          resized_img = cv2.adaptiveThreshold(resized_img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
           pyrlevel = pyrlevel + 1
           descriptors = self.extract_bow_descriptors(resized_img)
           if descriptors is None:
@@ -223,8 +224,8 @@ class Traineer:
      cv2.destroyAllWindows()          
 if __name__ == '__main__':
    traineer = Traineer()
-   #traineer.run()
-   traineer.capture()  
+   traineer.run()
+   traineer.test()  
 
 
 

@@ -354,8 +354,8 @@ class OpenCvTests:
             if os.path.exists(new_fname):
               continue
           img = cv2.imread(fullfname)
-          if(img.shape[0] < img.shape[1]): 
-            img = cv2.rotate(img, cv2.cv2.ROTATE_90_CLOCKWISE)
+          #if(img.shape[0] < img.shape[1]): 
+            #img = cv2.rotate(img, cv2.cv2.ROTATE_90_CLOCKWISE)
           for i in range(pyr_down_iterations):
             img = cv2.pyrDown(img)
           #x,y,w,h = self.getBiggestCornerRect(img)
@@ -370,6 +370,8 @@ class OpenCvTests:
           directory = os.path.dirname(new_fname)
           if not os.path.exists(directory):
              os.makedirs(directory)
+          img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY) 
+          img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
           cv2.imwrite(new_fname,img)
 
   def trySVMPredict(self,img_,rect,key):
@@ -424,35 +426,16 @@ def main():
      if(os.path.exists(cv.traineer.svm_fname)):
        os.remove(cv.traineer.svm_fname)
      path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
-     new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos'
-     cv.prepareImgsForTrainning(path,new_path,3,True)
+     new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_thresh'
+     cv.prepareImgsForTrainning(path,new_path,3,False)
 
    elif v=='3':
      cv.traineer.run()
      cv.backgroundSubtractor(cv.trySVMPredict)
    else:
-     #img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_130020825_BURST002.jpg')
-     #img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-     #for i in range(3):
-       # img = cv2.pyrDown(img)
-     #x,y,w,h = cv.getBiggestCornerRect(img)
-     #cv.removingBackground(img,(x,y,w,h),[0,0,0],False)
-
-     cv.backgroundSubtractor( cv.trySVMPredict )
-     return
-     cam= cv2.VideoCapture(0)
-
-     while(True):
-       sucess,frame = cam.read()
-       rect = cv.getBiggestContourRect(frame)
-       x,y,w,h = rect
-       cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
-       cv2.imshow('',frame)
-       k = cv2.waitKey(30)
-       if k == 27:
-         break
-     cv2.destroyAllWindows()
-   
+     img = cv.matchKeypoints(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\1.jpg'
+                       ,r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200910_130549389_BURST000_COVER.jpg',0)
+     cv.display(img)
 if __name__ == '__main__':
     main()
 
