@@ -5,15 +5,15 @@ import os
 class TraineerAnn:
 
    def __init__(self):
-      self.ann_fname = './anns/my_ann.xml'
+      self.ann_fname = './anns/my_ann2.xml'
       self.files = []
-      self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_thresh'
+      self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters'
       self.training_data = []
       self.training_labels = []
       self.hidden_nodes_size = 50
-      self.default_img_width = 150
-      self.default_img_height = 200
-      self.epochs=10
+      self.default_img_width = 200
+      self.default_img_height = 150
+      self.epochs=1
       self.input_layer_size = self.default_img_width * self.default_img_height
       self.loaded = False
       if(os.path.exists(self.ann_fname)):
@@ -24,7 +24,7 @@ class TraineerAnn:
          self.createAnn()
    def createAnn(self):
       self.ann = cv2.ml.ANN_MLP_create()
-      self.ann.setLayerSizes(np.array([self.input_layer_size,self.hidden_nodes_size,2]))
+      self.ann.setLayerSizes(np.array([self.input_layer_size,self.hidden_nodes_size,26]))
       self.ann.setActivationFunction(cv2.ml.ANN_MLP_BACKPROP,0.1,0.1)
       self.ann.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER | cv2.TERM_CRITERIA_EPS,100,1.0))
    def run(self):
@@ -61,12 +61,16 @@ class TraineerAnn:
          if sample.shape != shape:
              sample = cv2.resize(sample,shape,interpolation=cv2.INTER_AREA)
          sample = np.ravel(sample)
-      return self.ann.predict(np.array([sample],dtype=np.float32))   
+      return self.ann.predict(np.array([sample],dtype=np.float32))
+   def vect_class_idx(self,class_idx ,num_of_classes=26):
+      arr = []
+      for i in range(num_of_classes):
+         arr.append(0)
+      arr[class_idx] = class_idx   
+      return arr  
+         
    def train(self):
-       classes = {
-           0:[0,0],
-           1:[0,1]
-       }
+
        for epoch in range(self.epochs):
           for row in self.files:
             for file_name in row['imgs_per_class']:
@@ -74,7 +78,8 @@ class TraineerAnn:
                img = cv2.imread(file_name,cv2.IMREAD_GRAYSCALE)
                img = img.astype(np.float32)
                class_idx = row['index']
-               response = np.array([classes[class_idx]],dtype=np.float32)
+               response = np.array([self.vect_class_idx(class_idx)],dtype=np.float32)
+      
                img = np.ravel(img)
                img = np.array([img],dtype=np.float32)
                data = cv2.ml.TrainData_create(img,cv2.ml.ROW_SAMPLE,response)
@@ -132,17 +137,12 @@ def real_time_test():
 def test():
    ann = TraineerAnn()    
    files_to_test = [
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\100.jpg',
-       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\181.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\189.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals_excluded\fermento\IMG_20200829_094931.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\133.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\159.jpg'
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\A\0.jpg'
    ]
    ann.run()
    for fname in files_to_test:
      img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
-     img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
+     #img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
      dname = os.path.dirname(fname)
      base = os.path.basename(dname)
      print( 'arquivo da pasta %s \n' % (base) )
