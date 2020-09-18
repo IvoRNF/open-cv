@@ -10,11 +10,12 @@ class TraineerAnn:
       self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters'
       self.training_data = []
       self.training_labels = []
-      self.hidden_nodes_size = 50
+      self.hidden_nodes_size = 40
       self.default_img_width = 200
       self.default_img_height = 150
       self.epochs=1
       self.input_layer_size = self.default_img_width * self.default_img_height
+      self.output_layer_size = 4
       self.loaded = False
       if(os.path.exists(self.ann_fname)):
         self.ann = cv2.ml.ANN_MLP_load(self.ann_fname)
@@ -24,8 +25,10 @@ class TraineerAnn:
          self.createAnn()
    def createAnn(self):
       self.ann = cv2.ml.ANN_MLP_create()
-      self.ann.setLayerSizes(np.array([self.input_layer_size,self.hidden_nodes_size,26]))
+      self.ann.setLayerSizes(np.array([self.input_layer_size,self.hidden_nodes_size,self.output_layer_size]))
       self.ann.setActivationFunction(cv2.ml.ANN_MLP_BACKPROP,0.1,0.1)
+      #self.ann.setTrainMethod(cv2.ml.ANN_MLP_RPROP)
+      #self.ann.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM)
       self.ann.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER | cv2.TERM_CRITERIA_EPS,100,1.0))
    def run(self):
       if not self.loaded:
@@ -62,9 +65,9 @@ class TraineerAnn:
              sample = cv2.resize(sample,shape,interpolation=cv2.INTER_AREA)
          sample = np.ravel(sample)
       return self.ann.predict(np.array([sample],dtype=np.float32))
-   def vect_class_idx(self,class_idx ,num_of_classes=26):
+   def vect_class_idx(self,class_idx):
       arr = []
-      for i in range(num_of_classes):
+      for i in range(self.output_layer_size):
          arr.append(0)
       arr[class_idx] = class_idx   
       return arr  
@@ -137,7 +140,9 @@ def real_time_test():
 def test():
    ann = TraineerAnn()    
    files_to_test = [
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\A\0.jpg'
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\A\0.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\A\17.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\D\0.jpg'
    ]
    ann.run()
    for fname in files_to_test:
