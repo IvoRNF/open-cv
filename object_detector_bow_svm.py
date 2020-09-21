@@ -12,11 +12,11 @@ class Traineer:
       self.SVM_SCORE_THRESHOLD = 1
       self.flann = cv2.FlannBasedMatcher(
         dict(algorithm=self.FLANN_INDEX_KDTREE,trees=5),{})
-      self.num_clusters = 24
+      self.num_clusters = 4
       self.bow_kmeans_trainer = cv2.BOWKMeansTrainer( self.num_clusters )  
       self.bow_extractor = cv2.BOWImgDescriptorExtractor(self.sift,self.flann)
       self.files = []
-      self.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_thresh'
+      self.dirToWalk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters'
       self.training_data = []
       self.training_labels = []
       self.svm = None
@@ -38,11 +38,7 @@ class Traineer:
               y = len(self.files)   
               self.files.append({"index":i,"imgs_per_class":[],"class_name":basename})
               i += 1
-            row = self.files[y]
-            #if(basename == 'leite_lata' ):
-               #if len(row['imgs_per_class']) == 1:
-                 # continue
-            
+            row = self.files[y]       
             files_per_class = row["imgs_per_class"]
             files_per_class.append(os.path.join(root,name))
 
@@ -91,9 +87,9 @@ class Traineer:
       else:
         self.svm = cv2.ml.SVM_create()
         self.svm.setType(cv2.ml.SVM_C_SVC)
-        self.svm.setC(50)
-        self.svm.setGamma(0.5)
         self.svm.setKernel(cv2.ml.SVM_RBF)
+        self.svm.setC(2)
+        self.svm.setGamma(0.5)
 
         self.svm.train(np.array(self.training_data), cv2.ml.ROW_SAMPLE,
             np.array(self.training_labels))
@@ -154,38 +150,26 @@ class Traineer:
       
       
    def test(self):
-
-      #print(self.files)
-      max_score = -1
-      prediction_class_idx = -1
-      pyrlevel = 0
-      max_score_pyrlevel = -1
-      imgs = [
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\126.jpg',
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\182.jpg'  ,
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\111.jpg',
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\330.jpg'
+      files_to_test = [
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\A\0.jpg'  ,
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\B\0.jpg',
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\C\0.jpg',
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\D\0.jpg'
       ]
-      for fname in imgs:
-          resized_img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
-          resized_img = cv2.adaptiveThreshold(resized_img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
-          pyrlevel = pyrlevel + 1
-          descriptors = self.extract_bow_descriptors(resized_img)
+      for fname in files_to_test:
+          img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
+          descriptors = self.extract_bow_descriptors(img)
           if descriptors is None:
-             continue                   
-          prediction = self.svm.predict(descriptors)
-          class_idx = int(prediction[1][0][0])
+             continue
           raw_prediction = self.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
+          print(raw_prediction)
           score = raw_prediction[1][0][0]
+          prediction = self.svm.predict(descriptors)
+          print(prediction)
+          class_idx = int(prediction[1][0][0])
           path = os.path.dirname(fname)
           base = os.path.basename(path)
-          print('score %d at %d level, class %s folder %s' % (score,pyrlevel,self.get_class_name(class_idx),base)) 
-          if score > max_score:
-              max_score = score
-              max_score_pyrlevel = pyrlevel
-              prediction_class_idx = class_idx
-      
-      #5print( 'encontrou %s com score %d no level %d da piramide' % (self.get_class_name(prediction_class_idx),max_score,max_score_pyrlevel) )
+          print('score %d , class %s folder %s' % (score,self.get_class_name(class_idx),base)) 
    def capture(self):
      capture = cv2.VideoCapture(0)
      sucess,frame = capture.read()

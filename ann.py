@@ -10,9 +10,9 @@ class TraineerAnn:
       self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters'
       self.training_data = []
       self.training_labels = []
-      self.hidden_nodes_size = 40
-      self.default_img_width = 200
-      self.default_img_height = 150
+      self.hidden_nodes_size = 4
+      self.default_img_width = 32
+      self.default_img_height = 32
       self.epochs=1
       self.input_layer_size = self.default_img_width * self.default_img_height
       self.output_layer_size = 4
@@ -27,7 +27,7 @@ class TraineerAnn:
       self.ann = cv2.ml.ANN_MLP_create()
       self.ann.setLayerSizes(np.array([self.input_layer_size,self.hidden_nodes_size,self.output_layer_size]))
       self.ann.setActivationFunction(cv2.ml.ANN_MLP_BACKPROP,0.1,0.1)
-      #self.ann.setTrainMethod(cv2.ml.ANN_MLP_RPROP)
+      self.ann.setTrainMethod(cv2.ml.ANN_MLP_RPROP)
       #self.ann.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM)
       self.ann.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER | cv2.TERM_CRITERIA_EPS,100,1.0))
    def run(self):
@@ -142,7 +142,9 @@ def test():
    files_to_test = [
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\A\0.jpg',
       r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\A\17.jpg',
-      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\D\0.jpg'
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\D\0.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\C\11.jpg',
+      r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\C\5.jpg'
    ]
    ann.run()
    for fname in files_to_test:
@@ -185,23 +187,21 @@ def capture():
      sucess,frame = capture.read()     
    capture.release()   
    cv2.destroyAllWindows()
-def createLetterImg(letter : str):
-      w = 200
-      h = 150
+def createLetterImg(letter : str,shape=(150,200),fontScale=5):
+      h,w = shape
       img = np.zeros((h,w))
       middle_w = int(w/2)
-      x = middle_w - 40
+      x = middle_w - int(w/4)
       middle_h = int(h/2)
-      y = middle_h + 40
+      y = middle_h + int(h/4)
       txt = letter
-      size = len(txt)
-      cv2.putText(img,txt,(x,y),cv2.FONT_HERSHEY_SIMPLEX,5,(255,255,255),2)
+      cv2.putText(img,txt,(x,y),cv2.FONT_HERSHEY_SIMPLEX,fontScale,(255,255,255),2)
       return img
 
-def createLettersDataset(dir_to_save:str,samples_per_class=3):
-   for i in range(ord('A'),ord('Z')+1):
+def createLettersDataset(dir_to_save:str,samples_per_class=3,shape=(150,200),fontScale=5,end_letter='Z'):
+   for i in range(ord('A'),ord(end_letter)+1):
       letter = chr(i)
-      img = createLetterImg(letter)
+      img = createLetterImg(letter,shape,fontScale)
       for j in range(samples_per_class):
          fname = os.path.join(dir_to_save,letter)
          directory = fname
@@ -222,5 +222,5 @@ if __name__ == '__main__':
    elif v=='3':
      real_time_test() 
    else :
-      createLettersDataset(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters',50,)    
+      createLettersDataset(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters',50,(32,32),1,'D')    
 
