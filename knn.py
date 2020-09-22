@@ -6,10 +6,11 @@ class Knn:
     
     def __init__(self):
         self.files = []
-        self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters'
-        self.knn_fname = './my_knn.xml'
+        self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
+        self.knn_fname = './my_knnB.xml'
         self.loaded = False
-        self.hog = self.createHog((32,32))
+        self.shape = (100,64)
+        self.hog = self.createHog()
         if os.path.exists(self.knn_fname):
             print('loading knn from file')
             self.loaded = True
@@ -31,14 +32,16 @@ class Knn:
              idx = row['index']
              for file_name in dirs:
                 img = cv2.imread(file_name,cv2.IMREAD_GRAYSCALE)
+                self.tryReshape(img)
                 descriptor = self.hog.compute(img)
                 descriptors.append(descriptor)
                 responses.append(idx)
+         print('training')       
          knn.train(np.array(descriptors,dtype=np.float32),np.array(responses,dtype=np.float32))
          print('trained')
         
-    def createHog(self,shape=(32,32)):
-        hog = cv2.HOGDescriptor(shape,(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
+    def createHog(self):
+        hog = cv2.HOGDescriptor(self.shape,(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
         return hog
     def load_files(self):          
       i = 0
@@ -66,31 +69,33 @@ class Knn:
         self.knn.save(self.knn_fname)
     def predict(self,sample , k = 3):
         return self.knn.findNearest(sample, k)
- 
+    def tryReshape(self,img):
+        if img.shape != self.shape:
+            w = self.shape[1]
+            h = self.shape[0]
+            img = cv2.resize(img,(w,h),interpolation=cv2.INTER_AREA)
 
 if __name__ == '__main__':
     knn = Knn()
     knn.run()
     files_to_test = [
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\D\0.jpg',
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\A\0.jpg'  ,
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\B\0.jpg',
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters\C\0.jpg',
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\1.jpg',
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\181.jpg'  ,
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\350.jpg',
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200829_094657.jpg',
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200910_125946964_BURST000_COVER.jpg',
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST003.jpg'
             
     ]
+    descriptors = []
     for fname in files_to_test:
         img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
+        knn.tryReshape(img)
         descriptor = knn.hog.compute(img)
-        print( knn.predict(np.array([descriptor],dtype=np.float32)) )
-    ''' 
-    test_samples_class1 = np.random.randint(0,2,(8,6)).astype(np.float32)
-    test_samples_class2 = np.random.randint(3,8,(8,6)).astype(np.float32)
-    samples = np.vstack((test_samples_class1,test_samples_class2))
-    responses = np.array([1,1,1,1,1,1,1,1,2,2,2,2,2,2,2,2],dtype=np.float32)
-    knn.train(samples,responses)
-    ret, results, neighbours, dist = knn.predict(np.array([[5,5,5,5,5,5]],dtype=np.float32),3)
-    print("result: {}".format(results))
-    print("neighbours: {}".format(neighbours))
-    print("distance: {}".format(dist))'''
- 
-    #print('ret {}'.format(ret))
+        descriptors.append(descriptor)
+
+    ret, results, neighbours, dist = knn.predict(np.array(descriptors,dtype=np.float32))
+    print( 'results %s '% (results) )
+    print( 'ret %s' % (ret) )
+    print( 'dist %s' % (dist) )
+

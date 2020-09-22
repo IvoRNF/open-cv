@@ -222,5 +222,5 @@ if __name__ == '__main__':
    elif v=='3':
      real_time_test() 
    else :
-      createLettersDataset(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters',50,(32,32),1,'D')    
+      createLettersDataset(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\letters',50,(32,32),1,'E')    
 

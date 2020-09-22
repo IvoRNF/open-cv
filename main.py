@@ -343,7 +343,7 @@ class OpenCvTests:
           mask[i,j] = cv2.GC_BGD 
     cv2.grabCut(img,mask,None,bgdModel,fgdModel,5,cv2.GC_INIT_WITH_MASK)
     img[ (mask == cv2.GC_BGD) | ( mask == cv2.GC_PR_BGD) ] = backgroundColor  
-  def prepareImgsForTrainning(self,path : str , new_path : str, pyr_down_iterations = 3, removeBackground=True,onlyNewFiles = True):
+  def prepareImgsForTrainning(self,path : str , new_path : str, pyr_down_iterations = 3, removeBackground=True,onlyNewFiles = True,shape=(150,200)):
     for root,dirs,files in os.walk(path):
         for name in files:
           basename = os.path.basename(root)
@@ -363,15 +363,15 @@ class OpenCvTests:
           if(removeBackground):
             self.removingBackground(img,(x,y,w,h),[0,0,0])
           img_roi = img[y:y+h,x:x+w]
-          img = cv2.resize(img_roi,(150,200),interpolation=cv2.INTER_AREA)
+          img = cv2.resize(img_roi,shape,interpolation=cv2.INTER_AREA)
           
           #cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),2)
           print('writing %s ' % (new_fname))
           directory = os.path.dirname(new_fname)
           if not os.path.exists(directory):
              os.makedirs(directory)
-          img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY) 
-          img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
+          #img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY) 
+          #img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
           cv2.imwrite(new_fname,img)
 
   def trySVMPredict(self,img_,rect,key):
@@ -426,8 +426,8 @@ def main():
      if(os.path.exists(cv.traineer.svm_fname)):
        os.remove(cv.traineer.svm_fname)
      path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
-     new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos_thresh'
-     cv.prepareImgsForTrainning(path,new_path,3,False)
+     new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos2'
+     cv.prepareImgsForTrainning(path,new_path,3,True,True,(64,100))
 
    elif v=='3':
      cv.traineer.run()
