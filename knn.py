@@ -82,20 +82,17 @@ if __name__ == '__main__':
             r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\1.jpg',
             r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\181.jpg'  ,
             r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\350.jpg',
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200829_094657.jpg',
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\leite_po\IMG_20200910_125946964_BURST000_COVER.jpg',
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST003.jpg'
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos2\leite_po\IMG_20200910_125946964_BURST003.jpg'
             
     ]
-    descriptors = []
+
     for fname in files_to_test:
         img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
         knn.tryReshape(img)
         descriptor = knn.hog.compute(img)
-        descriptors.append(descriptor)
-
-    ret, results, neighbours, dist = knn.predict(np.array(descriptors,dtype=np.float32))
-    print( 'results %s '% (results) )
-    print( 'ret %s' % (ret) )
-    print( 'dist %s' % (dist) )
-
+        print(descriptor)
+        ret, results, neighbours, dist = knn.predict(np.array([descriptor],dtype=np.float32))
+        print( 'results %s '% (results) )
+        print( 'ret %s' % (ret) )
+        print( 'dist %s' % (dist) )
+ 
