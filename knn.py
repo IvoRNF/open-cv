@@ -9,7 +9,7 @@ class Knn:
         self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
         self.knn_fname = './my_knnB.xml'
         self.loaded = False
-        self.shape = (100,64)
+        self.shape = (100,75)
         self.hog = self.createHog()
         if os.path.exists(self.knn_fname):
             print('loading knn from file')
@@ -32,7 +32,7 @@ class Knn:
              idx = row['index']
              for file_name in dirs:
                 img = cv2.imread(file_name,cv2.IMREAD_GRAYSCALE)
-                self.tryReshape(img)
+                img = self.tryPyrDown(img)
                 descriptor = self.hog.compute(img)
                 descriptors.append(descriptor)
                 responses.append(idx)
@@ -41,7 +41,7 @@ class Knn:
          print('trained')
         
     def createHog(self):
-        hog = cv2.HOGDescriptor(self.shape,(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
+        hog = cv2.HOGDescriptor((64,64),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
         return hog
     def load_files(self):          
       i = 0
@@ -67,13 +67,12 @@ class Knn:
     def train(self,data , labels):
         self.knn.train(data,cv2.ml.ROW_SAMPLE,labels)
         self.knn.save(self.knn_fname)
-    def predict(self,sample , k = 3):
+    def predict(self,sample , k = 20):
         return self.knn.findNearest(sample, k)
-    def tryReshape(self,img):
-        if img.shape != self.shape:
-            w = self.shape[1]
-            h = self.shape[0]
-            img = cv2.resize(img,(w,h),interpolation=cv2.INTER_AREA)
+    def tryPyrDown(self,img,levels=1):
+        for i in range(levels):
+            img = cv2.pyrDown(img)
+        return img
 
 if __name__ == '__main__':
     knn = Knn()
@@ -81,16 +80,18 @@ if __name__ == '__main__':
     files_to_test = [
             r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\1.jpg',
             r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\181.jpg'  ,
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\350.jpg',
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos2\leite_po\IMG_20200910_125946964_BURST003.jpg'
+            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\350.jpg'
             
     ]
 
     for fname in files_to_test:
+        
         img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
-        knn.tryReshape(img)
+        img = knn.tryPyrDown(img)
+        print(img.shape)   
         descriptor = knn.hog.compute(img)
-        print(descriptor)
+        
+
         ret, results, neighbours, dist = knn.predict(np.array([descriptor],dtype=np.float32))
         print( 'results %s '% (results) )
         print( 'ret %s' % (ret) )
