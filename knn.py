@@ -6,11 +6,8 @@ class Knn:
     
     def __init__(self):
         self.files = []
-<<<<<<< HEAD
         self.files_test = []
         self.PERC_TO_TEST = 0.2  #20 por cento para teste  
-=======
->>>>>>> 80501867fff3ef3739a806ed4f75548e094857da
         self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
         self.knn_fname = './my_knnB.xml'
         self.loaded = False
@@ -19,12 +16,9 @@ class Knn:
         if os.path.exists(self.knn_fname):
             print('loading knn from file')
             self.loaded = True
-<<<<<<< HEAD
             self.knn = cv2.ml.KNearest_load(self.knn_fname)
             print('loaded')
-=======
             self.knn = cv2.ml.KNearest_load(self.knn_fname)  
->>>>>>> 80501867fff3ef3739a806ed4f75548e094857da
         else:
             print('saving knn to file')  
             self.knn = cv2.ml.KNearest_create()
@@ -46,17 +40,12 @@ class Knn:
                 descriptor = self.hog.compute(img)
                 descriptors.append(descriptor)
                 responses.append(idx)
-<<<<<<< HEAD
          print('training')
          descriptors = np.squeeze(descriptors)
          self.train(
                         np.array(descriptors,dtype=np.float32),
                         np.array(responses,dtype=np.float32)
                         )
-=======
-         print('training')       
-         knn.train(np.array(descriptors,dtype=np.float32),np.array(responses,dtype=np.float32))
->>>>>>> 80501867fff3ef3739a806ed4f75548e094857da
          print('trained')
         
     def createHog(self):
@@ -75,15 +64,12 @@ class Knn:
             row = self.files[y]
             files_per_class = row["imgs_per_class"]
             files_per_class.append(os.path.join(root,name))
-<<<<<<< HEAD
       for row in self.files:
           imgs = row['imgs_per_class']
           len_test = int(len(imgs)*self.PERC_TO_TEST)
           imgs_test ,row['imgs_per_class'] = np.split(imgs,[len_test])
           self.files_test.append({"index":row['index'],"imgs_per_class":imgs_test,"class_name":row['class_name']})
       
-=======
->>>>>>> 80501867fff3ef3739a806ed4f75548e094857da
     def files_contains_class_name_index_of(self, name : str):
        i = 0
        for f in self.files:
@@ -101,7 +87,6 @@ class Knn:
         for i in range(levels):
             img = cv2.pyrDown(img)
         return img
-<<<<<<< HEAD
 def evaluate_knn():
     knn = Knn()
     knn.run()
@@ -130,29 +115,5 @@ def evaluate_knn():
        print('acurracy %d%s para %s' % ( ((count_corrects//count_per_class) * 100),'%',class_name ))     
 if __name__ == '__main__':
     evaluate_knn()
-=======
 
-if __name__ == '__main__':
-    knn = Knn()
-    knn.run()
-    files_to_test = [
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\1.jpg',
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\181.jpg'  ,
-            r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\350.jpg'
-            
-    ]
-
-    for fname in files_to_test:
-        
-        img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
-        img = knn.tryPyrDown(img)
-        print(img.shape)   
-        descriptor = knn.hog.compute(img)
-        
-
-        ret, results, neighbours, dist = knn.predict(np.array([descriptor],dtype=np.float32))
-        print( 'results %s '% (results) )
-        print( 'ret %s' % (ret) )
-        print( 'dist %s' % (dist) )
->>>>>>> 80501867fff3ef3739a806ed4f75548e094857da
  
