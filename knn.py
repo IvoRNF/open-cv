@@ -66,6 +66,7 @@ class Knn:
             files_per_class.append(os.path.join(root,name))
       for row in self.files:
           imgs = row['imgs_per_class']
+          np.random.shuffle(imgs)
           len_test = int(len(imgs)*self.PERC_TO_TEST)
           imgs_test ,row['imgs_per_class'] = np.split(imgs,[len_test])
           self.files_test.append({"index":row['index'],"imgs_per_class":imgs_test,"class_name":row['class_name']})
@@ -106,7 +107,8 @@ def evaluate_knn():
           correct = (predicted_class_idx==class_idx)
           if(correct):
              eval_arr[class_idx] += 1
-          print('%s %d classificado como %d' % (class_name,class_idx,predicted_class_idx))
+          print('%s %d classificado como %d - arquivo %s'
+                % (class_name,class_idx,predicted_class_idx, os.path.basename(fname) ))
     for i in range( eval_arr.shape[0] ): 
        count_corrects = eval_arr[i]
        row = knn.files_test[i]
