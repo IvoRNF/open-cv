@@ -88,6 +88,38 @@ class Knn:
         for i in range(levels):
             img = cv2.pyrDown(img)
         return img
+def real_time_test():
+   knn = Knn()
+   knn.run()
+   capture = cv2.VideoCapture(0)
+   sucess,frame = capture.read()
+   roi_width = int(frame.shape[1] * 0.5)
+   roi_height = int(frame.shape[0] * 0.5)
+   middle_w = int(frame.shape[1]/2)
+   middle_h = int(frame.shape[0]/2)
+   x = middle_w - int(roi_width / 2)
+   y = middle_h - int(roi_height / 2)
+
+   while (sucess):
+     frame_cpy = frame.copy() 
+     cv2.rectangle(frame_cpy,(x,y),(x+roi_height,y+roi_width),(0,255,0),1) #inverte em paisagem
+     cv2.imshow('',frame_cpy)
+     frame_cpy = None
+     k = cv2.waitKey(30)
+     if k == ord('f'):
+        break
+     if k == ord('p'): 
+       gap = 10 
+       roi = frame[y:y+roi_width-gap,x:x+roi_height-gap]
+       roi = cv2.cvtColor(roi,cv2.COLOR_BGR2GRAY)
+       roi = cv2.resize(roi,(150,200),interpolation=cv2.INTER_AREA)
+       img = knn.tryPyrDown(roi)
+       descriptor = knn.hog.compute(img)
+       response = knn.predict(np.array([descriptor],dtype=np.float32))
+       print(response,end='\n\n')
+     sucess,frame = capture.read() 
+   capture.release()   
+   cv2.destroyAllWindows()    
 def evaluate_knn():
     knn = Knn()
     knn.run()
@@ -116,6 +148,11 @@ def evaluate_knn():
        class_name = row['class_name']
        print('acurracy %d%s para %s' % ( ((count_corrects//count_per_class) * 100),'%',class_name ))     
 if __name__ == '__main__':
-    evaluate_knn()
+    print('1 para evaluate \n2 para real time test\n')
+    v = input()
+    if v =='1':  
+      evaluate_knn()
+    elif v=='2':
+      real_time_test()
 
  
