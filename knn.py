@@ -17,8 +17,7 @@ class Knn:
             print('loading knn from file')
             self.loaded = True
             self.knn = cv2.ml.KNearest_load(self.knn_fname)
-            print('loaded')
-            self.knn = cv2.ml.KNearest_load(self.knn_fname)  
+            print('loaded') 
         else:
             print('saving knn to file')  
             self.knn = cv2.ml.KNearest_create()
