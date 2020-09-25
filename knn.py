@@ -89,6 +89,7 @@ class Knn:
             img = cv2.pyrDown(img)
         return img
 def real_time_test():
+   min_distance = 20000.00
    knn = Knn()
    knn.run()
    capture = cv2.VideoCapture(0)
@@ -99,25 +100,34 @@ def real_time_test():
    middle_h = int(frame.shape[0]/2)
    x = middle_w - int(roi_width / 2)
    y = middle_h - int(roi_height / 2)
-
+   class_names = {
+     0 : "leite caixa",
+     1 : "leite lata"
+   }
    while (sucess):
-     frame_cpy = frame.copy() 
-     cv2.rectangle(frame_cpy,(x,y),(x+roi_height,y+roi_width),(0,255,0),1) #inverte em paisagem
-     cv2.imshow('',frame_cpy)
-     frame_cpy = None
-     k = cv2.waitKey(30)
-     if k == ord('f'):
-        break
-     if k == ord('p'): 
-       gap = 10 
-       roi = frame[y:y+roi_width-gap,x:x+roi_height-gap]
-       roi = cv2.cvtColor(roi,cv2.COLOR_BGR2GRAY)
-       roi = cv2.resize(roi,(150,200),interpolation=cv2.INTER_AREA)
-       img = knn.tryPyrDown(roi)
-       descriptor = knn.hog.compute(img)
-       response = knn.predict(np.array([descriptor],dtype=np.float32))
-       print(response,end='\n\n')
-     sucess,frame = capture.read() 
+      frame_cpy = frame.copy() 
+      cv2.rectangle(frame_cpy,(x,y),(x+roi_height,y+roi_width),(0,255,0),1) #inverte em paisagem
+      cv2.imshow('',frame_cpy)
+      frame_cpy = None
+      k = cv2.waitKey(30)
+      if k == ord('f'):
+          break
+      gap = 10 
+      roi = frame[y:y+roi_width-gap,x:x+roi_height-gap] 
+      roi = cv2.cvtColor(roi,cv2.COLOR_BGR2GRAY)
+      roi = cv2.resize(roi,(150,200),interpolation=cv2.INTER_AREA)
+      img = knn.tryPyrDown(roi)
+      descriptor = knn.hog.compute(img)
+      response = knn.predict(np.array([descriptor],dtype=np.float32))
+      distance = np.sum ( np.squeeze(response[3]) )
+      class_idx = response[0]
+      sucess,frame = capture.read()
+      if(distance < min_distance):
+          class_name = class_names[class_idx]
+          txt = '%s(%.2f)' % (class_name,distance)
+          cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),1,cv2.LINE_AA)
+          #print(class_name,end='\n\n')
+       
    capture.release()   
    cv2.destroyAllWindows()    
 def evaluate_knn():
