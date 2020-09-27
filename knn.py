@@ -35,7 +35,7 @@ class Knn:
              idx = row['index']
              for file_name in dirs:
                 img = cv2.imread(file_name,cv2.IMREAD_GRAYSCALE)
-                img = self.tryPyrDown(img)
+                img = self.pyrDown(img)
                 descriptor = self.hog.compute(img)
                 descriptors.append(descriptor)
                 responses.append(idx)
@@ -81,9 +81,19 @@ class Knn:
     def train(self,data , labels):
         self.knn.train(data,cv2.ml.ROW_SAMPLE,labels)
         self.knn.save(self.knn_fname)
-    def predict(self,sample , k = 20):
-        return self.knn.findNearest(sample, k)
-    def tryPyrDown(self,img,levels=1):
+    def processAndPredict(self,sample , k = 20,pyrDownLevels=0):
+        sampleToPredict = sample
+        if type(sampleToPredict) != np.ndarray:
+            sampleToPredict = np.array(sampleToPredict,dtype=np.float32)
+        if len(sampleToPredict.shape)>2:
+          sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)
+        if sampleToPredict.shape != self.shape:
+           reversedShape = self.shape[::-1]
+           sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)     
+        sampleToPredict = self.pyrDown(sampleToPredict,pyrDownLevels)
+        descriptor = self.hog.compute(sampleToPredict)     
+        return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
+    def pyrDown(self,img,levels=1):
         for i in range(levels):
             img = cv2.pyrDown(img)
         return img
@@ -112,12 +122,8 @@ def real_time_test():
       if k == ord('f'):
           break
       gap = 10 
-      roi = frame[y:y+roi_width-gap,x:x+roi_height-gap] 
-      roi = cv2.cvtColor(roi,cv2.COLOR_BGR2GRAY)
-      roi = cv2.resize(roi,(150,200),interpolation=cv2.INTER_AREA)
-      img = knn.tryPyrDown(roi)
-      descriptor = knn.hog.compute(img)
-      response = knn.predict(np.array([descriptor],dtype=np.float32))
+      roi : np.ndarray = frame[y:y+roi_width-gap,x:x+roi_height-gap] 
+      response = knn.processAndPredict(roi)
       distance = np.sum ( np.squeeze(response[3]) )
       class_idx = response[0]
       sucess,frame = capture.read()
@@ -129,6 +135,29 @@ def real_time_test():
        
    capture.release()   
    cv2.destroyAllWindows()    
+def my_sliding_window(img : np.ndarray):
+      result = []  
+      h,w = img.shape[:2]
+      roi_w = middle_w = int(w/2)
+      roi_h = middle_h = int(h/2)
+      x = y = 0  
+      result.append((x,y,roi_w,roi_h))
+      x += roi_w
+      result.append((x,y,roi_w,roi_h))
+      y += roi_h
+      x = 0
+      result.append((x,y,roi_w,roi_h))
+      x += roi_w 
+      result.append((x,y,roi_w,roi_h))
+
+      x = int(roi_w/2)
+      y = int(roi_h/2)
+      result.append((x,y,roi_w,roi_h))
+      x = 0
+      result.append((x,y,roi_w,roi_h))
+      x = roi_w
+      result.append((x,y,roi_w,roi_h))
+      return np.array(list(result),dtype=np.int8)   
 def evaluate_knn():
     knn = Knn()
     knn.run()
@@ -140,10 +169,7 @@ def evaluate_knn():
         class_name = row['class_name']
         for fname in row['imgs_per_class']:
           img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
-          img = knn.tryPyrDown(img)
-          descriptor = knn.hog.compute(img)
-          response = knn.predict(np.array([descriptor],dtype=np.float32))
-          #print(response)
+          response = knn.processAndPredict(img)
           predicted_class_idx = response[0]
           correct = (predicted_class_idx==class_idx)
           if(correct):
