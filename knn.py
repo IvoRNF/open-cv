@@ -13,6 +13,7 @@ class Knn:
         self.loaded = False
         self.shape = (100,75)
         self.hog = self.createHog()
+        self.class_names = os.listdir(self.dir_to_walk)
         if os.path.exists(self.knn_fname):
             print('loading knn from file')
             self.loaded = True
@@ -109,10 +110,6 @@ def real_time_test():
    middle_h = int(frame.shape[0]/2)
    x = middle_w - int(roi_width / 2)
    y = middle_h - int(roi_height / 2)
-   class_names = {
-     0 : "leite caixa",
-     1 : "leite lata"
-   }
    while (sucess):
       frame_cpy = frame.copy() 
       cv2.rectangle(frame_cpy,(x,y),(x+roi_height,y+roi_width),(0,255,0),1) #inverte em paisagem
@@ -125,39 +122,17 @@ def real_time_test():
       roi : np.ndarray = frame[y:y+roi_width-gap,x:x+roi_height-gap] 
       response = knn.processAndPredict(roi)
       distance = np.sum ( np.squeeze(response[3]) )
-      class_idx = response[0]
+      class_idx = int(response[0])
       sucess,frame = capture.read()
       if(distance < min_distance):
-          class_name = class_names[class_idx]
+          class_name = knn.class_names[class_idx]
           txt = '%s(%.2f)' % (class_name,distance)
           cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_SIMPLEX,1,(0,255,0),1,cv2.LINE_AA)
           #print(class_name,end='\n\n')
        
    capture.release()   
    cv2.destroyAllWindows()    
-def my_sliding_window(img : np.ndarray):
-      result = []  
-      h,w = img.shape[:2]
-      roi_w = middle_w = int(w/2)
-      roi_h = middle_h = int(h/2)
-      x = y = 0  
-      result.append((x,y,roi_w,roi_h))
-      x += roi_w
-      result.append((x,y,roi_w,roi_h))
-      y += roi_h
-      x = 0
-      result.append((x,y,roi_w,roi_h))
-      x += roi_w 
-      result.append((x,y,roi_w,roi_h))
-
-      x = int(roi_w/2)
-      y = int(roi_h/2)
-      result.append((x,y,roi_w,roi_h))
-      x = 0
-      result.append((x,y,roi_w,roi_h))
-      x = roi_w
-      result.append((x,y,roi_w,roi_h))
-      return np.array(list(result),dtype=np.int8)   
+ 
 def evaluate_knn():
     knn = Knn()
     knn.run()
@@ -182,12 +157,49 @@ def evaluate_knn():
        count_per_class = len(row['imgs_per_class'])
        class_name = row['class_name']
        print('acurracy %d%s para %s' % ( ((count_corrects//count_per_class) * 100),'%',class_name ))     
+
+def capture():
+   capture = cv2.VideoCapture(0)
+   sucess,frame = capture.read()
+   roi_width = int(frame.shape[1] * 0.5)
+   roi_height = int(frame.shape[0] * 0.5)
+   middle_w = int(frame.shape[1]/2)
+   middle_h = int(frame.shape[0]/2)
+   x = middle_w - int(roi_width / 2)
+   y = middle_h - int(roi_height / 2)
+   i = 1000
+   while (sucess):
+     frame_cpy = frame.copy() 
+     cv2.rectangle(frame_cpy,(x,y),(x+roi_height,y+roi_width),(0,255,0),1) #inverte em paisagem
+     cv2.imshow('',frame_cpy)
+     frame_cpy = None
+     k = cv2.waitKey(30)
+     if k == ord('f'):
+        break
+     gap = 10 
+     if k == ord('l'): #salva foto de leite lata
+        i = i + 1
+        roi = frame[y:y+roi_width-gap,x:x+roi_height-gap]
+        roi = cv2.resize(roi,(150,200),interpolation=cv2.INTER_AREA)
+        cv2.imwrite('./datasets/captures/leite_lata/%d.jpg'%(i),roi)
+     elif k == ord('c'): #salva foto de leite caixa
+        i = i + 1
+        roi = frame[y:y+roi_width-gap,x:x+roi_height-gap]
+        roi = cv2.resize(roi,(150,200),interpolation=cv2.INTER_AREA)
+        cv2.imwrite('./datasets/captures/leite_caixa/%d.jpg'%(i),roi)   
+     sucess,frame = capture.read()     
+   capture.release()   
+   cv2.destroyAllWindows()
+
+
 if __name__ == '__main__':
-    print('1 para evaluate \n2 para real time test\n')
+    print('1 para evaluate \n2 para real time test\n3 capturar ')
     v = input()
     if v =='1':  
       evaluate_knn()
     elif v=='2':
       real_time_test()
+    elif v=='3':
+      capture()  
 
  
