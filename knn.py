@@ -190,7 +190,56 @@ def capture():
      sucess,frame = capture.read()     
    capture.release()   
    cv2.destroyAllWindows()
+def sliding_window(frame, step=20, window_size=(100, 40)):
+    img = frame 
+    img_h, img_w = img.shape[:2]
+    window_w, window_h = window_size
+    for y in range(0, img_w, step):
+      for x in range(0, img_h, step):
+        yield (x, y, window_w,window_h)
+def pyramid(img, scale_factor=1.25, min_size=(150,200),max_size=(600, 600)):
+    h, w = img.shape[:2]
+    min_w, min_h = min_size
+    max_w, max_h = max_size
+    while w >= min_w and h >= min_h:
+      if w <= max_w and h <= max_h:
+        yield img
+      w /= scale_factor
+      h /= scale_factor
+      img = cv2.resize(img, (int(w), int(h)),interpolation=cv2.INTER_AREA)  
+def pyramidByIndex(frame ,scale_factor=1.25, min_size=(100,50),max_size=(600,600), pos=3):
+  result = frame  
+  i = 0 
+  for img in pyramid(frame,scale_factor,min_size,max_size):
+     if i>= pos:
+       break
+     result = img 
+     i += 1
+  return result
+def scale_rect(shape_origin, shape_dest,rect):
+     x,y,w,h = rect 
+     scaleH = shape_dest[0]/float(shape_origin[0])
+     scaleX = shape_dest[1]/float(shape_origin[1])
+     return  (int(x*scaleX),int(y*scaleH),int(w*scaleX),int(h*scaleH))
 
+def detect_mult_scale(img): 
+  knn = Knn()
+  knn.run()
+  h,w = img.shape[:2]
+  result = None
+  min_distance = 40000.00
+  for resized in pyramid(img,1.25,(38,50),(w,h)):
+     for (x,y,w,h) in sliding_window(resized,20,(60,100)):
+       roi = resized[x:x+h,y:y+w]
+       if (roi.shape[0]>0) and(roi.shape[1]>0):
+         response = knn.processAndPredict(roi)
+         distance = np.sum ( np.squeeze(response[3]) )
+         if distance <  min_distance:
+            predicted_class_idx = response[0]
+            result = (predicted_class_idx,scale_rect(resized.shape,img.shape,(x,y,w,h)))
+            min_distance = distance
+  print(min_distance)          
+  return result         
 
 if __name__ == '__main__':
     print('1 para evaluate \n2 para real time test\n3 capturar ')
@@ -201,5 +250,18 @@ if __name__ == '__main__':
       real_time_test()
     elif v=='3':
       capture()  
-
+    else:
+      img = cv2.imread(
+        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST003.jpg',cv2.IMREAD_GRAYSCALE)
+      img = cv2.resize(img,(300,400))
+      print('...')
+      class_idx,(x,y,w,h) = detect_mult_scale(img)  
+      img = cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
+      print(class_idx)   
+      while(True):
+        cv2.imshow('',img)
+        k = cv2.waitKey(50)
+        if k == ord('f'):
+          break
+      cv2.destroyAllWindows()
  
