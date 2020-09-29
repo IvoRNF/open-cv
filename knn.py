@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+import time
 
 class Knn:
     
@@ -194,11 +195,11 @@ def sliding_window(frame, step=20, window_size=(100, 40)):
     img = frame 
     img_h, img_w = img.shape[:2]
     window_w, window_h = window_size
-    for y in range(0, img_w, step):
-      for x in range(0, img_h, step):
+    for y in np.arange(0, img_w, step):
+      for x in np.arange(0, img_h, step):
         yield (x, y, window_w,window_h)
 def pyramid(img, scale_factor=1.25, min_size=(150,200),max_size=(600, 600)):
-    h, w = img.shape[:2]
+    h, w =  img.shape[:2]
     min_w, min_h = min_size
     max_w, max_h = max_size
     while w >= min_w and h >= min_h:
@@ -222,27 +223,26 @@ def scale_rect(shape_origin, shape_dest,rect):
      scaleX = shape_dest[1]/float(shape_origin[1])
      return  (int(x*scaleX),int(y*scaleH),int(w*scaleX),int(h*scaleH))
 
-def detect_mult_scale(img,threashold=20000.00): 
-  knn = Knn()
-  knn.run()
+def detect_mult_scale(img,threashold=20000.00,winSize=(70,100),winStep=20,knn=None): 
   h,w = img.shape[:2]
   result = None
   min_distance = 40000.00
+  win_w,win_h = winSize
   for resized in pyramid(img,1.25,(38,50),(w,h)):
-     for (x,y,w,h) in sliding_window(resized,20,(70,100)):
-       roi = resized[x:x+h,y:y+w]
-       if (roi.shape[0]>0) and(roi.shape[1]>0):
-         response = knn.processAndPredict(roi)
-         distance = np.sum ( np.squeeze(response[3]) )
-         if distance <  min_distance:
-            predicted_class_idx = response[0]
-            result = (predicted_class_idx,distance,scale_rect(resized.shape,img.shape,(x,y,w,h)))
-            min_distance = distance
-         if distance <= threashold:
-           return result   
+     for (x,y,w,h) in sliding_window(resized,winStep,winSize):
+         roi = resized[x:x+h,y:y+w]
+         if (roi.shape[0]>=win_h) and(roi.shape[1]>=win_w):
+           response = knn.processAndPredict(roi)
+           distance = np.sum ( np.squeeze(response[3]) )
+           if distance <  min_distance:
+              predicted_class_idx = response[0]
+              result = (predicted_class_idx,distance,scale_rect(resized.shape,img.shape,(x,y,w,h)))
+              min_distance = distance
+           if distance <= threashold:
+             return result   
   return result         
 
-if __name__ == '__main__':
+def main():
     print('1 para evaluate \n2 para real time test\n3 capturar ')
     v = input()
     if v =='1':  
@@ -255,12 +255,15 @@ if __name__ == '__main__':
       f1 = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST003.jpg'
       f2 = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200829_094657.jpg'
       f3 = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200829_094657.jpg'
-      img = cv2.imread(f1)
-      img = cv2.resize(img,(612,816))
+      img = cv2.imread(f3)
+      img = cv2.resize(img,(312,416))
       print(img.shape)  
       frame = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
-      print('...')
-      class_idx,distance,(x,y,w,h) = detect_mult_scale(frame)  
+      knn = Knn()
+      knn.run()
+      start_time = time.time()
+      class_idx,distance,(x,y,w,h) = detect_mult_scale(frame,knn=knn)    
+      print("%.2f seconds in detect_mult_scale " % (time.time() - start_time))
       img = cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
       print(class_idx) 
       print(distance)  
@@ -270,4 +273,8 @@ if __name__ == '__main__':
         if k == ord('f'):
           break
       cv2.destroyAllWindows()
+
+
+if __name__ == '__main__':
+    main()
  
