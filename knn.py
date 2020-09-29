@@ -222,23 +222,24 @@ def scale_rect(shape_origin, shape_dest,rect):
      scaleX = shape_dest[1]/float(shape_origin[1])
      return  (int(x*scaleX),int(y*scaleH),int(w*scaleX),int(h*scaleH))
 
-def detect_mult_scale(img): 
+def detect_mult_scale(img,threashold=20000.00): 
   knn = Knn()
   knn.run()
   h,w = img.shape[:2]
   result = None
   min_distance = 40000.00
   for resized in pyramid(img,1.25,(38,50),(w,h)):
-     for (x,y,w,h) in sliding_window(resized,20,(60,100)):
+     for (x,y,w,h) in sliding_window(resized,20,(70,100)):
        roi = resized[x:x+h,y:y+w]
        if (roi.shape[0]>0) and(roi.shape[1]>0):
          response = knn.processAndPredict(roi)
          distance = np.sum ( np.squeeze(response[3]) )
          if distance <  min_distance:
             predicted_class_idx = response[0]
-            result = (predicted_class_idx,scale_rect(resized.shape,img.shape,(x,y,w,h)))
+            result = (predicted_class_idx,distance,scale_rect(resized.shape,img.shape,(x,y,w,h)))
             min_distance = distance
-  print(min_distance)          
+         if distance <= threashold:
+           break   
   return result         
 
 if __name__ == '__main__':
@@ -251,13 +252,18 @@ if __name__ == '__main__':
     elif v=='3':
       capture()  
     else:
-      img = cv2.imread(
-        r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST003.jpg',cv2.IMREAD_GRAYSCALE)
-      img = cv2.resize(img,(300,400))
+      f1 = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST003.jpg'
+      f2 = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200829_094657.jpg'
+      f3 = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200829_094657.jpg'
+      img = cv2.imread(f3)
+      img = cv2.resize(img,(612,816))
+      print(img.shape)  
+      frame = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
       print('...')
-      class_idx,(x,y,w,h) = detect_mult_scale(img)  
+      class_idx,distance,(x,y,w,h) = detect_mult_scale(frame)  
       img = cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
-      print(class_idx)   
+      print(class_idx) 
+      print(distance)  
       while(True):
         cv2.imshow('',img)
         k = cv2.waitKey(50)
