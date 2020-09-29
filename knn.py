@@ -239,7 +239,7 @@ def detect_mult_scale(img,threashold=20000.00):
             result = (predicted_class_idx,distance,scale_rect(resized.shape,img.shape,(x,y,w,h)))
             min_distance = distance
          if distance <= threashold:
-           break   
+           return result   
   return result         
 
 if __name__ == '__main__':
@@ -255,7 +255,7 @@ if __name__ == '__main__':
       f1 = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST003.jpg'
       f2 = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200829_094657.jpg'
       f3 = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200829_094657.jpg'
-      img = cv2.imread(f3)
+      img = cv2.imread(f1)
       img = cv2.resize(img,(612,816))
       print(img.shape)  
       frame = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
