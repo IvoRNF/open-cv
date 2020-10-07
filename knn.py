@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import os
 import time
+import math
 
 class Knn:
     
@@ -84,8 +85,6 @@ class Knn:
         print('saving knn to file')  
     def processAndPredict(self,sample , k = 20,pyrDownLevels=0):
         sampleToPredict = sample
-        if type(sampleToPredict) != np.ndarray:
-            sampleToPredict = np.array(sampleToPredict,dtype=np.float32)
         if len(sampleToPredict.shape)>2:
           sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)
         if sampleToPredict.shape != self.shape:
@@ -98,16 +97,14 @@ class Knn:
         for i in range(levels):
             img = cv2.pyrDown(img)
         return img
-def middleRects(shape,start=2,end=8,step=1):
+def middleRects(shape,start=2,end=8,step=1,center_x=0,center_y=0):
    h,w = shape[:2]
    for i in np.arange(start,end,step):
       factor = i/10
       rect_width = int(h * factor) #inverte em paisagem
       rect_height = int(w * factor)
-      middle_w = w//2
-      middle_h = h//2
-      x = (middle_w - rect_width//2)
-      y = (middle_h - rect_height//2)     
+      x = (center_x - rect_width//2)
+      y = (center_y - rect_height//2)     
       yield (x,y,rect_width,rect_height)
   
 def real_time_test():
@@ -124,17 +121,18 @@ def real_time_test():
       if k == ord('q'):
           break
       sucess,frame = capture.read()
-      for (x,y,w,h) in middleRects(frame.shape):
-          roi = frame[y:y+h,x:x+w] 
-          response = knn.processAndPredict(roi)
-          distance = np.sum ( np.squeeze(response[3]) )
-          class_idx = int(response[0])
-          if(distance < min_distance):
-            class_name = knn.class_names[class_idx]
-            txt = '%s(%.2f)' % (class_name,distance)
-            cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
-            cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
-            break 
+      #for (center_x,center_y) in circular_center_points(frame):
+      for (x,y,w,h) in middleRects(frame.shape,center_x=frame.shape[1]//2,center_y=frame.shape[0]//2):
+            roi = frame[y:y+h,x:x+w] 
+            response = knn.processAndPredict(roi)
+            distance = np.sum ( np.squeeze(response[3]) )
+            class_idx = int(response[0])
+            if(distance < min_distance):
+              class_name = knn.class_names[class_idx]
+              txt = '%s(%.2f)' % (class_name,distance)
+              cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
+              cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
+              break 
    capture.release()   
    cv2.destroyAllWindows()    
  
@@ -241,7 +239,14 @@ def detect_mult_scale(img,threashold=20000.00,winSize=(70,100),winStep=20,knn=No
            if distance <= threashold:
               return result   
   return result         
-
+def circular_center_points(frame): 
+   middle_w = frame.shape[1]//2
+   middle_h = frame.shape[0]//2
+   for radius in np.arange(0,20,20):
+    for degree in np.arange(0,360,80):
+        x = middle_w + radius * math.cos(degree * math.pi/180)
+        y = middle_h + radius * math.sin(degree * math.pi/180)
+        yield (round(y),round(x))
 
 def main():
     print('1 para evaluate \n2 para real time test\n3 capturar ')
