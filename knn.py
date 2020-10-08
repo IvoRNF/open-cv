@@ -99,10 +99,16 @@ class Knn:
         return img
 def middleRects(shape,start=2,end=8,step=1,center_x=0,center_y=0):
    h,w = shape[:2]
+   gap = 30
+   shapes = np.array([[h,w],[h+gap,w+gap],[h-gap,w-gap]],dtype=np.int32)
+   j = 0
    for i in np.arange(start,end,step):
       factor = i/10
-      rect_width = int(h * factor) #inverte em paisagem
-      rect_height = int(w * factor)
+      if j == 3:
+        j=0
+      rect_width = int(shapes[j][0] * factor) #inverte em paisagem
+      rect_height = int(shapes[j][1] * factor)
+      j += 1
       x = (center_x - rect_width//2)
       y = (center_y - rect_height//2)     
       yield (x,y,rect_width,rect_height)
@@ -123,18 +129,17 @@ def real_time_test():
       if k == ord('q'):
           break
       sucess,frame = capture.read()
-      #for (center_x,center_y) in circular_center_points(frame):
       for (x,y,w,h) in middleRects(frame.shape,center_x=x_center,center_y=y_center):
-            roi = frame[y:y+h,x:x+w] 
-            response = knn.processAndPredict(roi)
-            distance = np.sum ( np.squeeze(response[3]) )
-            class_idx = int(response[0])
-            if(distance < min_distance):
-              class_name = knn.class_names[class_idx]
-              txt = '%s(%.2f)' % (class_name,distance)
-              cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
-              cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
-              break 
+              roi = frame[y:y+h,x:x+w] 
+              response = knn.processAndPredict(roi)
+              distance = np.sum ( np.squeeze(response[3]) )
+              class_idx = int(response[0])
+              if(distance < min_distance):
+                class_name = knn.class_names[class_idx]
+                txt = '%s(%.2f)' % (class_name,distance)
+                cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
+                cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
+                break 
    capture.release()   
    cv2.destroyAllWindows()    
  
