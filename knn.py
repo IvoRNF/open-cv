@@ -113,16 +113,18 @@ def real_time_test():
    knn.run()
    capture = cv2.VideoCapture(0)
    sucess,frame = capture.read()
+   center_pt = (frame.shape[1]//2,frame.shape[0]//2)
+   x_center,y_center = center_pt
    while (sucess):
       frame_cpy = frame.copy() 
-      cv2.circle(frame_cpy,(frame.shape[1]//2,frame.shape[0]//2),10,(0,255,255),-1)
+      cv2.circle(frame_cpy,(x_center,y_center),10,(0,255,255),1)
       cv2.imshow('',frame_cpy)
       k = cv2.waitKey(5)
       if k == ord('q'):
           break
       sucess,frame = capture.read()
       #for (center_x,center_y) in circular_center_points(frame):
-      for (x,y,w,h) in middleRects(frame.shape,center_x=frame.shape[1]//2,center_y=frame.shape[0]//2):
+      for (x,y,w,h) in middleRects(frame.shape,center_x=x_center,center_y=y_center):
             roi = frame[y:y+h,x:x+w] 
             response = knn.processAndPredict(roi)
             distance = np.sum ( np.squeeze(response[3]) )
