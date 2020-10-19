@@ -181,12 +181,24 @@ def show_std():
      for fname in imgs: 
        descriptors.append(  knn.getHogDescriptor( cv2.imread(fname , cv2.IMREAD_GRAYSCALE) )  )
   descriptors = np.array(descriptors)
-  descriptors = [[1,0,1,0],[0,0,0,0]] #teste
   stds = np.std(descriptors,axis=0)
+  stds_sorted = np.sort(stds.copy())
+  siz = 9
+  somas = np.zeros((siz),dtype=np.float32)
+  desc_siz = stds_sorted.size
+  print('descriptor size = %d'%(desc_siz))
+  previous_idx = 0
+  for i in np.arange(0,siz):
+    last_index = (desc_siz//siz) * (i+1)
+    print('slicing range %d:%d'%(previous_idx,last_index))
+    sum_per_range = np.sum( stds_sorted[previous_idx:last_index] )
+    somas[i] = sum_per_range
+    previous_idx = last_index
   plt.figure(0)
   plt.title('std (> better)')
-  x = np.linspace(0,len(stds),len(stds))
-  plt.bar(x,stds)
+  stds_ranges = np.linspace(0,siz,siz)
+  print(somas)
+  plt.bar(stds_ranges,somas)
   plt.show()
 
 def capture():
