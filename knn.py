@@ -3,6 +3,7 @@ import numpy as np
 import os
 import time
 import math
+import matplotlib.pyplot as plt 
 
 class Knn:
     
@@ -35,9 +36,7 @@ class Knn:
              dirs = row['imgs_per_class']
              idx = row['index']
              for file_name in dirs:
-                img = cv2.imread(file_name,cv2.IMREAD_GRAYSCALE)
-                img = self.pyrDown(img)
-                descriptor = self.hog.compute(img)
+                descriptor = self.getHogDescriptor( cv2.imread(file_name,cv2.IMREAD_GRAYSCALE) ,0)
                 descriptors.append(descriptor)
                 responses.append(idx)
          print('training')
@@ -83,15 +82,20 @@ class Knn:
         self.knn.train(data,cv2.ml.ROW_SAMPLE,labels)
         self.knn.save(self.knn_fname)
         print('saving knn to file')  
+    
+    def getHogDescriptor(self,sample,pyrDownLevels=0):
+      sampleToPredict = sample
+      if len(sampleToPredict.shape)>2:
+        sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)
+      if sampleToPredict.shape != self.shape:
+          reversedShape = self.shape[::-1]
+          sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)     
+      sampleToPredict = self.pyrDown(sampleToPredict,pyrDownLevels)
+      descriptor = self.hog.compute(sampleToPredict)  
+      descriptor = np.squeeze(descriptor) 
+      return descriptor
     def processAndPredict(self,sample , k = 20,pyrDownLevels=0):
-        sampleToPredict = sample
-        if len(sampleToPredict.shape)>2:
-          sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)
-        if sampleToPredict.shape != self.shape:
-           reversedShape = self.shape[::-1]
-           sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)     
-        sampleToPredict = self.pyrDown(sampleToPredict,pyrDownLevels)
-        descriptor = self.hog.compute(sampleToPredict)     
+        descriptor = self.getHogDescriptor(sample,pyrDownLevels)  
         return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
     def pyrDown(self,img,levels=1):
         for i in range(levels):
@@ -162,6 +166,27 @@ def evaluate_knn():
        count_per_class = len(row['imgs_per_class'])
        class_name = row['class_name']
        print('acurracy %.2f%s para %s' % ( ((count_corrects/count_per_class) * 100),'%',class_name ))     
+
+
+def show_std(): 
+
+  knn = Knn()
+  knn.run()
+  if knn.loaded: 
+    knn.load_files()
+  
+  descriptors = []
+  for row in knn.files:
+     imgs = row['imgs_per_class']
+     for fname in imgs: 
+       descriptors.append(  knn.getHogDescriptor( cv2.imread(fname , cv2.IMREAD_GRAYSCALE) )  )
+  descriptors = np.array(descriptors)
+  stds = np.std(descriptors,axis=0)
+  #print(np.max(stds))
+  plt.figure(0)
+  plt.title('std (> better)')
+  plt.hist(stds)
+  plt.show()
 
 def capture():
    capture = cv2.VideoCapture(0)
@@ -251,7 +276,7 @@ def circular_center_points(frame):
         yield (round(y),round(x))
 
 def main():
-    print('1 para evaluate \n2 para real time test\n3 capturar ')
+    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std ')
     v = input()
     if v =='1':  
       evaluate_knn()
@@ -259,6 +284,8 @@ def main():
       real_time_test()
     elif v=='3':
       capture()
+    elif v=='4':
+      show_std()  
 
 
 if __name__ == '__main__':
