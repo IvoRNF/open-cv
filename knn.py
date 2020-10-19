@@ -181,11 +181,12 @@ def show_std():
      for fname in imgs: 
        descriptors.append(  knn.getHogDescriptor( cv2.imread(fname , cv2.IMREAD_GRAYSCALE) )  )
   descriptors = np.array(descriptors)
+  descriptors = [[1,0,1,0],[0,0,0,0]] #teste
   stds = np.std(descriptors,axis=0)
-  #print(np.max(stds))
   plt.figure(0)
   plt.title('std (> better)')
-  plt.hist(stds)
+  x = np.linspace(0,len(stds),len(stds))
+  plt.bar(x,stds)
   plt.show()
 
 def capture():
