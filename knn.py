@@ -288,8 +288,34 @@ def circular_center_points(frame):
         y = middle_h + radius * math.sin(degree * math.pi/180)
         yield (round(y),round(x))
 
+def remove_ilumination(img): 
+    hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV) 
+    (h,s,v) = cv2.split(hsv) 
+    s[:] = 0
+    h[:] = 0
+    hsvValueOnly = cv2.merge([h,s,v])
+    converted = cv2.cvtColor(hsvValueOnly,cv2.COLOR_HSV2BGR) 
+    return converted
+def reduce_ilumination(): 
+    img1 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\32.jpg')
+    img2 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\340.jpg')
+
+    converted1 = remove_ilumination(img1)
+    converted2 = remove_ilumination(img2)      
+    img1 = cv2.cvtColor(img1,cv2.COLOR_BGR2GRAY)
+    img2 = cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY) 
+    cv2.imshow('1',img1) 
+    cv2.imshow('2',img2)
+    cv2.imshow('3',converted1)
+    cv2.imshow('4',converted2)
+    
+    
+    cv2.waitKey(0) 
+    
+
+
 def main():
-    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std ')
+    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 reduce ilumination ')
     v = input()
     if v =='1':  
       evaluate_knn()
@@ -298,7 +324,9 @@ def main():
     elif v=='3':
       capture()
     elif v=='4':
-      show_std()  
+      show_std() 
+    elif v=='5':
+      reduce_ilumination()   
 
 
 if __name__ == '__main__':
