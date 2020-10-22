@@ -169,12 +169,10 @@ def evaluate_knn():
 
 
 def show_std(): 
-
   knn = Knn()
   knn.run()
   if knn.loaded: 
     knn.load_files()
-  
   descriptors = []
   for row in knn.files:
      imgs = row['imgs_per_class']
@@ -182,23 +180,17 @@ def show_std():
        descriptors.append(  knn.getHogDescriptor( cv2.imread(fname , cv2.IMREAD_GRAYSCALE) )  )
   descriptors = np.array(descriptors)
   stds = np.std(descriptors,axis=0)
-  stds_sorted = np.sort(stds.copy())
-  siz = 9
-  somas = np.zeros((siz),dtype=np.float32)
-  desc_siz = stds_sorted.size
-  print('descriptor size = %d'%(desc_siz))
-  previous_idx = 0
-  for i in np.arange(0,siz):
-    last_index = (desc_siz//siz) * (i+1)
-    print('slicing range %d:%d'%(previous_idx,last_index))
-    sum_per_range = np.sum( stds_sorted[previous_idx:last_index] )
-    somas[i] = sum_per_range
-    previous_idx = last_index
+  stds = stds * 100
+  stds = np.int8(stds)
+  min_bin = np.min(stds)
+  max_bin = np.max(stds)
+  bins = (max_bin-min_bin)
+  hist = np.histogram(stds,bins=bins)
+  hist = hist[0]
   plt.figure(0)
   plt.title('std (> better)')
-  stds_ranges = np.linspace(0,siz,siz)
-  print(somas)
-  plt.bar(stds_ranges,somas)
+  ranges = np.linspace(min_bin,max_bin,bins)
+  plt.bar(ranges,hist)
   plt.show()
 
 def capture():
