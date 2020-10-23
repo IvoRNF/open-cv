@@ -12,7 +12,7 @@ class Knn:
         self.files_test = []
         self.PERC_TO_TEST = 0.2  #20 por cento para teste  
         self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
-        self.knn_fname = './my_knnB.xml'
+        self.knn_fname = './my_knn.xml'
         self.loaded = False
         self.shape = (100,75)
         self.hog = self.createHog()
@@ -48,6 +48,14 @@ class Knn:
          print('trained')
         
     def createHog(self):
+        ''' 
+        w,h = self.shape[::-1] #necessario aspect raio 1:2 , ajustando .. 
+        metade = h//2 
+        diff = w - metade 
+        w = w - diff
+        print('hog=')
+        print(w,h)
+        '''
         hog = cv2.HOGDescriptor((64,64),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
         return hog
     def load_files(self):          
@@ -86,6 +94,7 @@ class Knn:
     def getHogDescriptor(self,sample,pyrDownLevels=0):
       sampleToPredict = sample
       if len(sampleToPredict.shape)>2:
+        sampleToPredict = remove_ilumination(sampleToPredict)
         sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)
       if sampleToPredict.shape != self.shape:
           reversedShape = self.shape[::-1]
@@ -94,7 +103,7 @@ class Knn:
       descriptor = self.hog.compute(sampleToPredict)  
       descriptor = np.squeeze(descriptor) 
       return descriptor
-    def processAndPredict(self,sample , k = 20,pyrDownLevels=0):
+    def processAndPredict(self,sample , k = 22,pyrDownLevels=0):
         descriptor = self.getHogDescriptor(sample,pyrDownLevels)  
         return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
     def pyrDown(self,img,levels=1):
@@ -152,7 +161,7 @@ def evaluate_knn():
         class_idx = row['index']
         class_name = row['class_name']
         for fname in row['imgs_per_class']:
-          img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
+          img = cv2.imread(fname)
           response = knn.processAndPredict(img)
           predicted_class_idx = response[0]
           correct = (predicted_class_idx==class_idx)
@@ -288,26 +297,16 @@ def remove_ilumination(img):
     hsvValueOnly = cv2.merge([h,s,v])
     converted = cv2.cvtColor(hsvValueOnly,cv2.COLOR_HSV2BGR) 
     return converted
-def reduce_ilumination(): 
+def teste_descriptor(): 
     img1 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\32.jpg')
     img2 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\340.jpg')
-
-    converted1 = remove_ilumination(img1)
-    converted2 = remove_ilumination(img2)      
-    img1 = cv2.cvtColor(img1,cv2.COLOR_BGR2GRAY)
-    img2 = cv2.cvtColor(img2,cv2.COLOR_BGR2GRAY) 
-    cv2.imshow('1',img1) 
-    cv2.imshow('2',img2)
-    cv2.imshow('3',converted1)
-    cv2.imshow('4',converted2)
-    
-    
-    cv2.waitKey(0) 
-    
+    knn = Knn()
+    descr = knn.getHogDescriptor(img1)
+    print(descr.shape)
 
 
 def main():
-    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 reduce ilumination ')
+    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste descriptor')
     v = input()
     if v =='1':  
       evaluate_knn()
@@ -318,7 +317,7 @@ def main():
     elif v=='4':
       show_std() 
     elif v=='5':
-      reduce_ilumination()   
+      teste_descriptor()   
 
 
 if __name__ == '__main__':
