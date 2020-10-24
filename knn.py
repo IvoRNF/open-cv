@@ -4,6 +4,8 @@ import os
 import time
 import math
 import matplotlib.pyplot as plt 
+from skimage.feature import hog
+from skimage import exposure
 
 class Knn:
     
@@ -100,12 +102,14 @@ class Knn:
           reversedShape = self.shape[::-1]
           sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)     
       sampleToPredict = self.pyrDown(sampleToPredict,pyrDownLevels)
-      descriptor = self.hog.compute(sampleToPredict)  
-      descriptor = np.squeeze(descriptor) 
-      return descriptor
-    def processAndPredict(self,sample , k = 22,pyrDownLevels=0):
+      descr = hog(sampleToPredict,orientations=8,pixels_per_cell=(16,16),
+                            cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog
+      #self.hog.compute(sampleToPredict) #opencv hog
+      descr = np.squeeze(descr) 
+      return descr
+    def processAndPredict(self,sample , k = 12,pyrDownLevels=0):
         descriptor = self.getHogDescriptor(sample,pyrDownLevels)  
-        return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
+        return self.knn.findNearest(np.array([descriptor],dtype=np.float32), 12)
     def pyrDown(self,img,levels=1):
         for i in range(levels):
             img = cv2.pyrDown(img)
@@ -121,7 +125,7 @@ def middleRects(shape,start=2,end=8,step=1,center_x=0,center_y=0):
       yield (x,y,rect_width,rect_height)
   
 def real_time_test():
-   min_distance = 20000.00
+   min_distance = 26.00
    knn = Knn()
    knn.run()
    capture = cv2.VideoCapture(0)
@@ -147,7 +151,7 @@ def real_time_test():
               txt = '%s(%.2f)' % (class_name,distance)
               cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
               cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
-              break 
+              break
    capture.release()   
    cv2.destroyAllWindows()    
  
@@ -298,12 +302,23 @@ def remove_ilumination(img):
     converted = cv2.cvtColor(hsvValueOnly,cv2.COLOR_HSV2BGR) 
     return converted
 def teste_descriptor(): 
-    img1 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\32.jpg')
-    img2 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\340.jpg')
-    knn = Knn()
-    descr = knn.getHogDescriptor(img1)
-    print(descr.shape)
+    img1 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\32.jpg',cv2.IMREAD_GRAYSCALE)
+    #img2 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\340.jpg',cv2.IMREAD_UNCHANGED)
+    print(img1.shape)
+    #knn = Knn()
+    #descr = knn.getHogDescriptor(img1)
+    #print(descr.shape)
+   
+    
+    descr = hog(img1,orientations=8,pixels_per_cell=(12,12),
+                            cells_per_block=(1,1),visualize=False,multichannel=False)
+    #hog_img_scaled = exposure.rescale_intensity(hog_img,in_range=(0,10))           
 
+
+    print(descr.shape)         
+    #while(True):
+      #cv2.imshow('',hog_img_scaled)
+      #cv2.waitKey(10)
 
 def main():
     print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste descriptor')
