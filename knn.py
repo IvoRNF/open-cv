@@ -16,7 +16,7 @@ class Knn:
         self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
         self.knn_fname = './my_knn.xml'
         self.loaded = False
-        self.shape = (100,75)
+        self.shape = (200,100)
         self.hog = self.createHog()
         self.class_names = os.listdir(self.dir_to_walk)
         if os.path.exists(self.knn_fname):
@@ -38,7 +38,7 @@ class Knn:
              dirs = row['imgs_per_class']
              idx = row['index']
              for file_name in dirs:
-                descriptor = self.getHogDescriptor( cv2.imread(file_name,cv2.IMREAD_GRAYSCALE) ,0)
+                descriptor = self.getHogDescriptor( cv2.imread(file_name,cv2.IMREAD_GRAYSCALE))
                 descriptors.append(descriptor)
                 responses.append(idx)
          print('training')
@@ -50,15 +50,8 @@ class Knn:
          print('trained')
         
     def createHog(self):
-        ''' 
-        w,h = self.shape[::-1] #necessario aspect raio 1:2 , ajustando .. 
-        metade = h//2 
-        diff = w - metade 
-        w = w - diff
-        print('hog=')
-        print(w,h)
-        '''
-        hog = cv2.HOGDescriptor((64,64),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
+         #necessario aspect raio 1:2
+        hog = cv2.HOGDescriptor((100,200),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
         return hog
     def load_files(self):          
       i = 0
@@ -93,23 +86,24 @@ class Knn:
         self.knn.save(self.knn_fname)
         print('saving knn to file')  
     
-    def getHogDescriptor(self,sample,pyrDownLevels=0):
+    def getHogDescriptor(self,sample,hog_open_cv=True):
       sampleToPredict = sample
       if len(sampleToPredict.shape)>2:
         sampleToPredict = remove_ilumination(sampleToPredict)
-        sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)
+        sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)  
       if sampleToPredict.shape != self.shape:
           reversedShape = self.shape[::-1]
-          sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)     
-      sampleToPredict = self.pyrDown(sampleToPredict,pyrDownLevels)
-      descr = hog(sampleToPredict,orientations=8,pixels_per_cell=(16,16),
-                            cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog
-      #self.hog.compute(sampleToPredict) #opencv hog
-      descr = np.squeeze(descr) 
+          sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)  
+      if(hog_open_cv):
+        descr = self.hog.compute(sampleToPredict) #opencv hog
+        descr = np.squeeze(descr)
+      else:
+        descr =hog(sampleToPredict,orientations=8,pixels_per_cell=(4,4),
+                            cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog      
       return descr
-    def processAndPredict(self,sample , k = 12,pyrDownLevels=0):
-        descriptor = self.getHogDescriptor(sample,pyrDownLevels)  
-        return self.knn.findNearest(np.array([descriptor],dtype=np.float32), 12)
+    def processAndPredict(self,sample , k = 6):
+        descriptor = self.getHogDescriptor(sample)  
+        return self.knn.findNearest(np.array([descriptor],dtype=np.float32), 6)
     def pyrDown(self,img,levels=1):
         for i in range(levels):
             img = cv2.pyrDown(img)
@@ -125,13 +119,20 @@ def middleRects(shape,start=2,end=8,step=1,center_x=0,center_y=0):
       yield (x,y,rect_width,rect_height)
   
 def real_time_test():
-   min_distance = 26.00
+   min_distance = 3500.00
    knn = Knn()
    knn.run()
    capture = cv2.VideoCapture(0)
    sucess,frame = capture.read()
    center_pt = (frame.shape[1]//2,frame.shape[0]//2)
    x_center,y_center = center_pt
+   '''curr_rect = None
+   i = 0 
+   for (x,y,w,h) in middleRects(frame.shape,center_x=x_center,center_y=y_center):
+     if i == 3:
+        break
+     curr_rect = (x,y,w,h)
+     i += 1'''
    while (sucess):
       frame_cpy = frame.copy() 
       cv2.circle(frame_cpy,(x_center,y_center),10,(0,255,255),1)
@@ -140,18 +141,16 @@ def real_time_test():
       if k == ord('q'):
           break
       sucess,frame = capture.read()
-      #for (center_x,center_y) in circular_center_points(frame):
       for (x,y,w,h) in middleRects(frame.shape,center_x=x_center,center_y=y_center):
-            roi = frame[y:y+h,x:x+w] 
-            response = knn.processAndPredict(roi)
-            distance = np.sum ( np.squeeze(response[3]) )
+          roi = frame[y:y+h,x:x+w] 
+          response = knn.processAndPredict(roi)
+          distance = np.sum ( np.squeeze(response[3]) )
+          if(distance < min_distance):  
             class_idx = int(response[0])
-            if(distance < min_distance):
-              class_name = knn.class_names[class_idx]
-              txt = '%s(%.2f)' % (class_name,distance)
-              cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
-              cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
-              break
+            class_name = knn.class_names[class_idx]
+            txt = '%s(%.2f)' % (class_name,distance)
+            cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1) 
+            cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
    capture.release()   
    cv2.destroyAllWindows()    
  
@@ -305,20 +304,22 @@ def teste_descriptor():
     img1 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\32.jpg',cv2.IMREAD_GRAYSCALE)
     #img2 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\340.jpg',cv2.IMREAD_UNCHANGED)
     print(img1.shape)
-    #knn = Knn()
+    knn = Knn()
     #descr = knn.getHogDescriptor(img1)
     #print(descr.shape)
    
+    descr_open_cv = knn.getHogDescriptor(img1)
+
+    descr,hog_img = hog(img1,orientations=8,pixels_per_cell=(4,4),
+                            cells_per_block=(1,1),visualize=True,multichannel=False)
+    hog_img_scaled = exposure.rescale_intensity(hog_img,in_range=(0,10))           
+
     
-    descr = hog(img1,orientations=8,pixels_per_cell=(12,12),
-                            cells_per_block=(1,1),visualize=False,multichannel=False)
-    #hog_img_scaled = exposure.rescale_intensity(hog_img,in_range=(0,10))           
-
-
-    print(descr.shape)         
-    #while(True):
-      #cv2.imshow('',hog_img_scaled)
-      #cv2.waitKey(10)
+    print('hog descriptor skimage -> ',descr.shape)
+    print('hog descriptor opencv -> ',descr_open_cv.shape)         
+    while(True):
+      cv2.imshow('',hog_img_scaled)
+      cv2.waitKey(10)
 
 def main():
     print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste descriptor')
