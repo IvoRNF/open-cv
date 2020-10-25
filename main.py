@@ -1,7 +1,6 @@
 import numpy as np 
 import cv2
 import os
-from object_detector_bow_svm import Traineer
 from non_max_suppression_fast import non_max_suppression_fast as nms
 
 

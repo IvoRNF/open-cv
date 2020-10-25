@@ -6,19 +6,16 @@ import math
 import matplotlib.pyplot as plt 
 from skimage.feature import hog
 from skimage import exposure
+from file_loader import FileLoader
 
-class Knn:
+class Knn(FileLoader):
     
     def __init__(self):
-        self.files = []
-        self.files_test = []
-        self.PERC_TO_TEST = 0.2  #20 por cento para teste  
-        self.dir_to_walk = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
+        super().__init__(dir_to_walk=r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
         self.knn_fname = './my_knn.xml'
         self.loaded = False
         self.shape = (200,100)
         self.hog = self.createHog()
-        self.class_names = os.listdir(self.dir_to_walk)
         if os.path.exists(self.knn_fname):
             print('loading knn from file')
             self.loaded = True
@@ -52,35 +49,7 @@ class Knn:
     def createHog(self):
          #necessario aspect raio 1:2
         hog = cv2.HOGDescriptor((100,200),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
-        return hog
-    def load_files(self):          
-      i = 0
-      for root,dirs,files in os.walk(self.dir_to_walk):
-          for name in files:
-            basename = os.path.basename(root)
-            y = self.files_contains_class_name_index_of(basename)
-            if (y == -1):
-              y = len(self.files)   
-              self.files.append({"index":i,"imgs_per_class":[],"class_name":basename})
-              i += 1 
-            row = self.files[y]
-            files_per_class = row["imgs_per_class"]
-            files_per_class.append(os.path.join(root,name))
-      for row in self.files:
-          imgs = row['imgs_per_class']
-          np.random.shuffle(imgs)
-          len_test = int(len(imgs)*self.PERC_TO_TEST)
-          imgs_test ,row['imgs_per_class'] = np.split(imgs,[len_test])
-          self.files_test.append({"index":row['index'],"imgs_per_class":imgs_test,"class_name":row['class_name']})
-      
-    def files_contains_class_name_index_of(self, name : str):
-       i = 0
-       for f in self.files:
-           row = self.files[i]
-           if name == row['class_name']:
-               return i
-           i += 1    
-       return -1             
+        return hog            
     def train(self,data , labels):
         self.knn.train(data,cv2.ml.ROW_SAMPLE,labels)
         self.knn.save(self.knn_fname)
