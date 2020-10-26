@@ -2,10 +2,12 @@ import cv2
 import os 
 from file_loader import FileLoader
 import numpy as np
-
+from xml.etree import ElementTree
+import pickle
+import re
 class Svm(FileLoader):
 
-    def __init__(self, C=16,G=0.5):
+    def __init__(self, C=12.5,G=0.50625):
         super().__init__(dir_to_walk= r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
         self.shape = (200,100)
         self.hog = self.createHog(self.shape)
@@ -19,9 +21,10 @@ class Svm(FileLoader):
             print('creating svm model.')
             self.svm = cv2.ml.SVM_create()
             self.svm.setType(cv2.ml.SVM_C_SVC)
-            self.svm.setKernel(cv2.ml.SVM_RBF)
+            self.svm.setKernel(cv2.ml.SVM_LINEAR)
             self.svm.setC(C)
             self.svm.setGamma(G)
+            self.svm.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER,100,1e-6))
             self.trainAndSave()
     def trainAndSave(self): 
         self.load_files()
@@ -55,10 +58,47 @@ class Svm(FileLoader):
       descr = self.hog.compute(sampleToPredict)
       descr = np.squeeze(descr)
       return descr
+    def processAndPredict(self,img):
+       descr = self.getHogDescriptor(img)  
+       return self.svm.predict(np.array([descr]),flags=cv2.ml.STAT_MODEL_RAW_OUTPUT) 
 
 
-def evaluate_svm():
-    svm = Svm()
+
+def runtime_teste():
+    hog = cv2.HOGDescriptor((100,200),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
+    svs = getSvmCoef('./my_svm.xml')
+    hog.setSVMDetector( np.array[ svs  ]  )
+    cap = cv2.VideoCapture(0)
+    captured,frame = cap.read()
+    while captured: 
+      k = cv2.waitKey(10)
+      if k == ord('q'):
+         break  
+      rects ,weigths = hog.detectMultiScale(frame)  
+      for (x,y,w,h),wt in zip(rects,weigths):
+        txt = '%.2f' % (wt)
+        cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)  
+        cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)       
+      cv2.imshow('',frame)
+      captured,frame = cap.read()
+    cap.release()
+    cv2.destroyAllWindows()  
+
+def getSvmCoef(fname :str):
+    tree = ElementTree.parse(fname)
+    root = tree.getroot()
+    svs = root.getchildren()[0].getchildren()[-2].getchildren()[0] 
+    rho = float( root.getchildren()[0].getchildren()[-1].getchildren()[0].getchildren()[1].text )
+    svmvec = [float(x) for x in re.sub( '\s+', ' ', svs.text ).strip().split(' ')]
+    svmvec.append(-rho)  
+    return svmvec    
+
+def evaluate_svm(C=3,G=0,retrain=True):
+    svm_fname = './my_svm.xml'
+    if(retrain):
+      if os.path.exists(svm_fname):  
+        os.remove(svm_fname)
+    svm = Svm(C=C,G=G)
     if svm.loaded:
        svm.load_files() 
     eval_arr = np.zeros(len(svm.files_test),dtype=np.int8)  
@@ -66,22 +106,25 @@ def evaluate_svm():
         class_idx = row['index']
         class_name = row['class_name']
         for fname in row['imgs_per_class']:
-          img = cv2.imread(fname)
-          descr = svm.getHogDescriptor(img)
-          scores = None
-          response = svm.svm.predict(np.array([descr]))
+          response = svm.processAndPredict(cv2.imread(fname))  
+          #print(response)
           predicted_class_idx = response[1][0][0]
           correct = (predicted_class_idx==class_idx)
           if(correct):
              eval_arr[class_idx] += 1
-          print('%s %d classificado como %d - arquivo %s'
-                % (class_name,class_idx,predicted_class_idx, os.path.basename(fname) ))
-        for i in range( eval_arr.shape[0] ): 
-            count_corrects = eval_arr[i]
-            row = svm.files_test[i]
-            count_per_class = len(row['imgs_per_class'])
-            class_name = row['class_name']
-            print('acurracy %.2f%s para %s' % ( ((count_corrects/count_per_class) * 100),'%',class_name ))         
+          print('%s %d classificado como %d - arquivo %s'% (class_name,class_idx,predicted_class_idx, os.path.basename(fname) ))
+    print('SVM com C=%.4f ,G=%.4f'%(C,G))
+    for i in range( eval_arr.shape[0] ): 
+        count_corrects = eval_arr[i]
+        row = svm.files_test[i]
+        count_per_class = len(row['imgs_per_class'])
+        class_name = row['class_name']
+        print(' acurracy %.2f%s para %s' % ( ((count_corrects/count_per_class) * 100),'%',class_name ))         
 
 if __name__ == '__main__':
-    evaluate_svm()
+    print('1 para evaluate\n2 para realtime teste')
+    v = input()
+    if v == '1': 
+      evaluate_svm()
+    elif v== '2':
+       runtime_teste()
