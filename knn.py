@@ -72,7 +72,7 @@ class Knn(FileLoader):
       return descr
     def processAndPredict(self,sample , k = 6):
         descriptor = self.getHogDescriptor(sample)  
-        return self.knn.findNearest(np.array([descriptor],dtype=np.float32), 6)
+        return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
     def pyrDown(self,img,levels=1):
         for i in range(levels):
             img = cv2.pyrDown(img)
