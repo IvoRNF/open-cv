@@ -14,7 +14,7 @@ class Knn(FileLoader):
         super().__init__(dir_to_walk=r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
         self.knn_fname = './my_knn.xml'
         self.loaded = False
-        self.shape = (200,100)
+        self.shape = (128,64)
         self.hog = self.createHog()
         if os.path.exists(self.knn_fname):
             print('loading knn from file')
@@ -48,7 +48,7 @@ class Knn(FileLoader):
         
     def createHog(self):
          #necessario aspect raio 1:2
-        hog = cv2.HOGDescriptor((100,200),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
+        hog = cv2.HOGDescriptor()#(100,200),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
         return hog            
     def train(self,data , labels):
         self.knn.train(data,cv2.ml.ROW_SAMPLE,labels)
@@ -88,7 +88,7 @@ def middleRects(shape,start=2,end=8,step=1,center_x=0,center_y=0):
       yield (x,y,rect_width,rect_height)
   
 def real_time_test():
-   min_distance = 3500.00
+   min_distance = 170
    knn = Knn()
    knn.run()
    capture = cv2.VideoCapture(0)
