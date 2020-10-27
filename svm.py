@@ -7,7 +7,7 @@ import pickle
 import re
 class Svm(FileLoader):
 
-    def __init__(self, C=12.5,G=0.50625):
+    def __init__(self, C=3,G=0):
         super().__init__(dir_to_walk= r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
         self.shape = (200,100)
         self.hog = self.createHog(self.shape)
@@ -41,7 +41,7 @@ class Svm(FileLoader):
         descriptors = np.array(descriptors)      
         responses = np.array(responses)
         self.svm.train(descriptors, cv2.ml.ROW_SAMPLE,responses)
-        self.svm.save(self.svm_fname)
+        self.svm.save(self.svm_fname)   
         print('file saved.')
     def createHog(self,shape):
         #necessario aspect raio 1:2
@@ -65,13 +65,15 @@ class Svm(FileLoader):
 
 
 def runtime_teste():
+    
+    svs = getSvmVectors('./my_svm.xml')
     hog = cv2.HOGDescriptor((100,200),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
-    svs = getSvmCoef('./my_svm.xml')
-    hog.setSVMDetector( np.array[ svs  ]  )
+    print(svs.shape)
+    hog.setSVMDetector( svs[1] )
     cap = cv2.VideoCapture(0)
     captured,frame = cap.read()
     while captured: 
-      k = cv2.waitKey(10)
+      k = cv2.waitKey(0)
       if k == ord('q'):
          break  
       rects ,weigths = hog.detectMultiScale(frame)  
@@ -84,21 +86,23 @@ def runtime_teste():
     cap.release()
     cv2.destroyAllWindows()  
 
-def getSvmCoef(fname :str):
-    tree = ElementTree.parse(fname)
-    root = tree.getroot()
-    svs = root.getchildren()[0].getchildren()[-2].getchildren()[0] 
-    rho = float( root.getchildren()[0].getchildren()[-1].getchildren()[0].getchildren()[1].text )
-    svmvec = [float(x) for x in re.sub( '\s+', ' ', svs.text ).strip().split(' ')]
-    svmvec.append(-rho)  
-    return svmvec    
+def getSvmVectors(fname :str):
+    svm = cv2.ml.SVM_load(fname)
+    svecs = svm.getSupportVectors()
+    coefs = np.zeros((svecs.shape[0],svecs.shape[1] + 1 ),dtype=svecs.dtype)
+    for i in np.arange(coefs.shape[0]):
+      last_idx = coefs.shape[1]-1
+      rho,alpha,svidx = svm.getDecisionFunction(i)
+      coefs[i,:last_idx] = svecs[i,:]
+      coefs[i,last_idx] = -rho     
+    return  coefs 
 
-def evaluate_svm(C=3,G=0,retrain=True):
+def evaluate_svm(retrain=True):
     svm_fname = './my_svm.xml'
     if(retrain):
       if os.path.exists(svm_fname):  
         os.remove(svm_fname)
-    svm = Svm(C=C,G=G)
+    svm = Svm()
     if svm.loaded:
        svm.load_files() 
     eval_arr = np.zeros(len(svm.files_test),dtype=np.int8)  
@@ -113,7 +117,6 @@ def evaluate_svm(C=3,G=0,retrain=True):
           if(correct):
              eval_arr[class_idx] += 1
           print('%s %d classificado como %d - arquivo %s'% (class_name,class_idx,predicted_class_idx, os.path.basename(fname) ))
-    print('SVM com C=%.4f ,G=%.4f'%(C,G))
     for i in range( eval_arr.shape[0] ): 
         count_corrects = eval_arr[i]
         row = svm.files_test[i]
