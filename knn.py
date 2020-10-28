@@ -95,13 +95,14 @@ def real_time_test():
    sucess,frame = capture.read()
    center_pt = (frame.shape[1]//2,frame.shape[0]//2)
    x_center,y_center = center_pt
-   '''curr_rect = None
+   curr_rect = None
    i = 0 
    for (x,y,w,h) in middleRects(frame.shape,center_x=x_center,center_y=y_center):
      if i == 3:
         break
      curr_rect = (x,y,w,h)
-     i += 1'''
+     i += 1
+   print(curr_rect)  
    while (sucess):
       frame_cpy = frame.copy() 
       cv2.circle(frame_cpy,(x_center,y_center),10,(0,255,255),1)
@@ -110,16 +111,17 @@ def real_time_test():
       if k == ord('q'):
           break
       sucess,frame = capture.read()
-      for (x,y,w,h) in middleRects(frame.shape,center_x=x_center,center_y=y_center):
-          roi = frame[y:y+h,x:x+w] 
-          response = knn.processAndPredict(roi)
-          distance = np.sum ( np.squeeze(response[3]) )
-          if(distance < min_distance):  
-            class_idx = int(response[0])
-            class_name = knn.class_names[class_idx]
-            txt = '%s(%.2f)' % (class_name,distance)
-            cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1) 
-            cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
+      x,y,w,h = curr_rect
+      roi = frame[y:y+h,x:x+w]  
+      response = knn.processAndPredict(roi)
+      distance = np.sum ( np.squeeze(response[3]) )
+      cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
+      if(distance < min_distance):  
+        class_idx = int(response[0])
+        class_name = knn.class_names[class_idx]
+        txt = '%s(%.2f)' % (class_name,distance) 
+        cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
+ 
    capture.release()   
    cv2.destroyAllWindows()    
  
@@ -227,17 +229,17 @@ def pyramid(img, scale_factor=1.25, min_size=(150,200),max_size=(600, 600)):
         yield img
       w /= scale_factor
       h /= scale_factor
-      img = cv2.resize(img, (int(w), int(h)),interpolation=cv2.INTER_AREA)  
+      img = cv2.resize(img, (int(w), int(h)),interpolation=cv2.INTER_LINEAR)  
 def scale_rect(shape_origin, shape_dest,rect):
      x,y,w,h = rect 
      scaleH = shape_dest[0]/float(shape_origin[0])
      scaleX = shape_dest[1]/float(shape_origin[1])
      return  (int(x*scaleX),int(y*scaleH),int(w*scaleX),int(h*scaleH))
-
-def detect_mult_scale(img,threashold=20000.00,winSize=(70,100),winStep=20,knn=None): 
+    
+def detect_mult_scale(img,threashold=170,winSize=(70,100),winStep=20,knn=None): 
   h,w = img.shape[:2]
   result = None
-  min_distance = 40000.00
+  min_distance = 170
   win_w,win_h = winSize
   for resized in pyramid(img,1.25,(38,50),(w,h)):
      for (x,y,w,h) in sliding_window(resized,winStep,winSize):

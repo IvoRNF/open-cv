@@ -7,7 +7,7 @@ import pickle
 import re
 class Svm(FileLoader):
 
-    def __init__(self, C=3,G=0):
+    def __init__(self, C=3,G=0.3):
         super().__init__(dir_to_walk= r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
         self.shape = (128,64)
         self.hog = self.createHog(self.shape)
@@ -21,10 +21,10 @@ class Svm(FileLoader):
             print('creating svm model.')
             self.svm = cv2.ml.SVM_create()
             self.svm.setType(cv2.ml.SVM_C_SVC)
-            self.svm.setKernel(cv2.ml.SVM_LINEAR)
+            self.svm.setKernel(cv2.ml.SVM_RBF)
             self.svm.setC(C)
-            #self.svm.setGamma(G)
-            #self.svm.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER,100,1e-6))
+            self.svm.setGamma(G)
+            self.svm.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER,100,1e-6))
             self.trainAndSave()
     def trainAndSave(self): 
         self.load_files()
@@ -45,8 +45,7 @@ class Svm(FileLoader):
         print('file saved.')
     def createHog(self,shape):
         #necessario aspect raio 1:2
-        #w_h = shape[::-1]
-        hog = cv2.HOGDescriptor()#w_h,(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
+        hog = cv2.HOGDescriptor()
         return hog    
     def getHogDescriptor(self,sample):
       sampleToPredict = sample
@@ -56,7 +55,7 @@ class Svm(FileLoader):
           reversedShape = self.shape[::-1]
           sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)  
       descr = self.hog.compute(sampleToPredict)
-      #descr = np.squeeze(descr)
+      descr = np.squeeze(descr)
       return descr
     def processAndPredict(self,img):
        descr = self.getHogDescriptor(img)  
@@ -66,15 +65,10 @@ class Svm(FileLoader):
 
 def runtime_teste():
     
-    svs = getSvmVectors('./my_svm.xml')
-    svs_c1 = svs[1]
-    hog = cv2.HOGDescriptor()#(100,200),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
+    
+    hog = cv2.HOGDescriptor()
     svs_people = hog.getDefaultPeopleDetector()
-    print(svs_c1.shape)
-    print(svs_people.shape)
-    print(svs_people[0:5])
-    print(svs_people[-5])
-    hog.setSVMDetector( svs_c1 )
+    hog.setSVMDetector( svs_people)
     cap = cv2.VideoCapture(0)
     captured,frame = cap.read()
     while captured: 
@@ -95,14 +89,11 @@ def runtime_teste():
 
 def getSvmVectors(fname :str):
     svm = cv2.ml.SVM_load(fname)
-    svecs = svm.getSupportVectors()
-    coefs = np.zeros((svecs.shape[0],svecs.shape[1] + 1 ),dtype=svecs.dtype)
-    for i in np.arange(coefs.shape[0]):
-      last_idx = coefs.shape[1]-1
-      rho,alpha,svidx = svm.getDecisionFunction(i)
-      coefs[i,:last_idx] = svecs[i,:]
-      coefs[i,last_idx] = -abs(rho)     
-    return  coefs 
+    svecs = svm.getSupportVectors()[1]
+    rho,alpha,svecs_idxs = svm.getDecisionFunction(1)
+    svecs = np.append(svecs,-rho)  
+    return svecs
+    
 
 def evaluate_svm(retrain=True):
     svm_fname = './my_svm.xml'
@@ -118,7 +109,7 @@ def evaluate_svm(retrain=True):
         class_name = row['class_name']
         for fname in row['imgs_per_class']:
           response = svm.processAndPredict(cv2.imread(fname))  
-          #print(response)
+          print(response)
           predicted_class_idx = response[1][0][0]
           correct = (predicted_class_idx==class_idx)
           if(correct):
