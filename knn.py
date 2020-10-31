@@ -247,12 +247,10 @@ def capture():
      sucess,frame = capture.read()     
    capture.release()   
    cv2.destroyAllWindows()
-def sliding_window(frame, step=20, window_size=(100, 40)):
-    img = frame 
-    img_h, img_w = img.shape[:2]
+def sliding_window(step_y=20,step_x=20, window_size=(100, 40),x_start=0,y_start=0,y_end=0,x_end=0):
     window_w, window_h = window_size
-    for y in np.arange(0, img_w, step):
-      for x in np.arange(0, img_h, step):
+    for y in np.arange(y_start, y_end, step_y):
+      for x in np.arange(x_start, x_end, step_x):
         yield (x, y, window_w,window_h)
 def pyramid(img, scale_factor=1.25, min_size=(150,200),max_size=(600, 600)):
     h, w =  img.shape[:2]
@@ -325,20 +323,43 @@ def main():
       show_std() 
     elif v=='5':
       img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\testes_captures\2.jpg')
-      
-      rectAtLv2 = (130,60,150,220)
+      knn = Knn()
+      knn.run()
+      rectAtLv2 = (130,60,150,200)
+      wds = []
+      i = 0
+      origin_shape = 346, 462 #shape level 2 
+      x,y,w,h = scale_rect(origin_shape,img.shape[:2],rectAtLv2) #rect reescaled from level 2 to 1
+           
+      x_start = w - 80  
+      y_start = 0
+      y_end = img.shape[0] - img.shape[0]//7  
+      x_end = img.shape[1] - 300 
+      for win in sliding_window(step_x=15,step_y=15,window_size=(w,h),y_start=y_start,x_start=x_start,y_end=y_end,x_end=x_end):
+        wds.append(list(win))
+        if i == 220:
+           break 
+        i += 1
+      wds = np.array(wds) 
+      z = 0  
       while True: 
         i = 0
-        for resized in pyr(img,levels=2): 
-         if(i==2):
-           x,y,w,h = rectAtLv2
-           cv2.rectangle(resized,(x,y),(x+w,y+h),(0,255,0),2) 
-         elif(i==0):
-           origin_shape = 346, 462 #shape level 2 
-           x,y,w,h = scale_rect(origin_shape,resized.shape[:2],rectAtLv2) #rect reescaled from level 2 to 1
-           cv2.rectangle(resized,(x,y),(x+w,y+h),(0,255,0),2)    
-         cv2.imshow(str(i),resized)
-         i+= 1
+        for resized in pyr(img,levels=3):    
+           if z == wds.shape[0]:
+             z = 0
+           _x,_y,_w,_h = wds[z]
+           z += 1
+           cv2.rectangle(resized,(_x,_y),(_x+_w,_y+_h),(0,255,0),2)  
+           
+           #for j in np.arange(10)
+           
+           
+           #roi = img[y:y+h,x:x+w]
+           #response = knn.processAndPredict(roi)
+           #predicted_class_idx = int(response[0] )
+           # print('achou %s' % (knn.class_names[predicted_class_idx]))
+           cv2.imshow(str(i),resized)
+           i+= 1
         k = cv2.waitKey(10)
         if k==ord('q'):
           break 
