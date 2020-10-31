@@ -6,9 +6,8 @@ from non_max_suppression_fast import non_max_suppression_fast as nms
 
 class OpenCvTests:
 
-  def __init__(self,traineer : Traineer = None):
+  def __init__(self):
     
-      self.traineer = traineer
       self.snapshotIdx = 0
   
   
@@ -42,9 +41,14 @@ class OpenCvTests:
     success,frame = camCapture.read()
     numFramesRemaining = seconds * fps - 1 
     while success and (numFramesRemaining>0):
+        cv2.imshow('',frame)
         videoWriter.write(frame)
         success,frame = camCapture.read()
         numFramesRemaining -= 1
+        k = cv2.waitKey(1)
+        if k == ord('q'):
+          break
+    cv2.destroyAllWindows()    
         
   def display(self, img):
      cv2.imshow('',img)
@@ -373,26 +377,8 @@ class OpenCvTests:
           #img = cv2.adaptiveThreshold(img,255,cv2.ADAPTIVE_THRESH_GAUSSIAN_C,cv2.THRESH_BINARY,11,2)
           cv2.imwrite(new_fname,img)
 
-  def trySVMPredict(self,img_,rect,key):
 
-    img = img_.copy()
-    if(len(img.shape) > 2):
-      img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    x,y,w,h = rect
-    resized = img[y:y+h,x:x+w]
-    resized = cv2.resize(resized,(150,200),interpolation=cv2.INTER_AREA)
-    descriptors = self.traineer.extract_bow_descriptors(resized)
-    if descriptors is None:
-       return                   
-    prediction = self.traineer.svm.predict(descriptors)
-    class_idx = int(prediction[1][0][0])
-    raw_prediction = self.traineer.svm.predict(descriptors,flags=cv2.ml.STAT_MODEL_RAW_OUTPUT)
-    score = -raw_prediction[1][0][0]
-    class_name = self.traineer.get_class_name(class_idx)
-    print('%s(%d)' % (class_name,raw_prediction[1][0][0]))
-    if(score >= self.traineer.SVM_SCORE_THRESHOLD):
-      cv2.putText(img_,'%s(%d)' % (class_name,score), (x,y), cv2.FONT_HERSHEY_SIMPLEX, 2, 255)
-      cv2.rectangle(img_,(x,y),(w,h),(0,255,0),2)
+
    
   def doSaveFile(self,frame ,rect,key):
     if key == ord('s'):
@@ -401,40 +387,8 @@ class OpenCvTests:
       self.snapshotIdx = self.snapshotIdx + 1
       cv2.imwrite('snapshot%d.jpg' % (self.snapshotIdx) ,roi)
 def main():
-
-
-   print('my svm . \n 1 - testar . \n 2 - preparar dataset \n 3 - treinar e testar ')
-   v = input()
-   cv = OpenCvTests(Traineer())
-   if v=='1':
-     cv.traineer.run()
-     files = [
-          r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\leite_po\IMG_20200910_125946964_BURST002.jpg',
-          r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals\creme_leite\IMG_20200829_094657.jpg'
-          
-       ]
-     for f in files:
-       img_ = cv2.imread(f)
-       img_ = cv2.cvtColor(img_, cv2.COLOR_BGR2GRAY)
-       print('... %s' % (os.path.basename(f)))
-       for img in cv.traineer.pyramid(img_,min_size=(150,200),max_size=img_.shape): 
-         cv.trySVMPredict(img,(0,0,img.shape[1],img.shape[0]),None)
-       #cv.display(img)
-     #cv.backgroundSubtractor(cv.trySVMPredict)
-   elif v=='2':
-     if(os.path.exists(cv.traineer.svm_fname)):
-       os.remove(cv.traineer.svm_fname)
-     path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\originals'
-     new_path = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos2'
-     cv.prepareImgsForTrainning(path,new_path,3,True,True,(64,100))
-
-   elif v=='3':
-     cv.traineer.run()
-     cv.backgroundSubtractor(cv.trySVMPredict)
-   else:
-     img = cv.matchKeypoints(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_caixa\1.jpg'
-                       ,r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\meus_produtos\creme_leite_\IMG_20200910_130549389_BURST000_COVER.jpg',0)
-     cv.display(img)
+   cv = OpenCvTests() 
+   cv.captureVideoCamera(60,'./my_captures.avi')
 if __name__ == '__main__':
     main()
 

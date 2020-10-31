@@ -96,32 +96,66 @@ def real_time_test():
    center_pt = (frame.shape[1]//2,frame.shape[0]//2)
    x_center,y_center = center_pt
    curr_rect = None
-   i = 0 
-   for (x,y,w,h) in middleRects(frame.shape,center_x=x_center,center_y=y_center):
-     if i == 3:
+   sliding_rects = [ ]
+   i = 0
+   for curr_rect in middleRects(frame.shape,center_x=x_center,center_y=y_center):
+      if i == 3:
+        sliding_rects.append(list(curr_rect))
         break
-     curr_rect = (x,y,w,h)
-     i += 1
-   print(curr_rect)  
+      i+=1
+
+   x,y,w,h = tuple(sliding_rects[0])
+   x = w//4
+   y = h//4
+   x_step = 10
+   y_step = 10
+   for _ in np.arange(6):
+      sliding_rects.append(list((x,y,w,h)))
+      x += x_step
+   x,y,w,h = curr_rect
+   for _ in np.arange(6):
+      y += y_step 
+      for _ in np.arange(6):
+        sliding_rects.append(list((x,y,w,h)))
+        x += y_step
+   sliding_rects = np.array(sliding_rects)
+   sliding_rects_sz = sliding_rects.shape[0] 
+   print(sliding_rects_sz)
+   print(sliding_rects)
+   i = 0
+   found_rect_idx = -1
    while (sucess):
       frame_cpy = frame.copy() 
       cv2.circle(frame_cpy,(x_center,y_center),10,(0,255,255),1)
-      cv2.imshow('',frame_cpy)
+      
       k = cv2.waitKey(5)
       if k == ord('q'):
           break
       sucess,frame = capture.read()
-      x,y,w,h = curr_rect
-      roi = frame[y:y+h,x:x+w]  
+      if(i==sliding_rects_sz):
+        i = 0 
+      x,y,w,h = tuple(sliding_rects[i])
+      if(found_rect_idx == -1):
+        center_rect = sliding_rects[0]
+        _x,_y,_w,_h = center_rect
+        cv2.rectangle(frame_cpy,(_x,_y),(_x+_w,_y+_h),(0,255,0),1)
+        #i+=1
+      roi = frame[y:y+h,x:x+w]
+      #if(found_rect_idx == -1):
+        #cv2.rectangle(frame_cpy,(x,y),(x+w,y+h),(255,0,0),1)  
       response = knn.processAndPredict(roi)
       distance = np.sum ( np.squeeze(response[3]) )
-      cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
-      if(distance < min_distance):  
+      
+      if(distance < min_distance):
+        found_rect_idx = i
+        cv2.rectangle(frame_cpy,(x,y),(x+w,y+h),(0,255,0),1)  
         class_idx = int(response[0])
         class_name = knn.class_names[class_idx]
         txt = '%s(%.2f)' % (class_name,distance) 
-        cv2.putText(frame,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
- 
+        cv2.putText(frame_cpy,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
+      else:
+        found_rect_idx = -1 
+      cv2.imshow('',frame_cpy)  
    capture.release()   
    cv2.destroyAllWindows()    
  
@@ -271,29 +305,15 @@ def remove_ilumination(img):
     hsvValueOnly = cv2.merge([h,s,v])
     converted = cv2.cvtColor(hsvValueOnly,cv2.COLOR_HSV2BGR) 
     return converted
-def teste_descriptor(): 
-    img1 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\32.jpg',cv2.IMREAD_GRAYSCALE)
-    #img2 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\340.jpg',cv2.IMREAD_UNCHANGED)
-    print(img1.shape)
-    knn = Knn()
-    #descr = knn.getHogDescriptor(img1)
-    #print(descr.shape)
-   
-    descr_open_cv = knn.getHogDescriptor(img1)
-
-    descr,hog_img = hog(img1,orientations=8,pixels_per_cell=(4,4),
-                            cells_per_block=(1,1),visualize=True,multichannel=False)
-    hog_img_scaled = exposure.rescale_intensity(hog_img,in_range=(0,10))           
-
-    
-    print('hog descriptor skimage -> ',descr.shape)
-    print('hog descriptor opencv -> ',descr_open_cv.shape)         
-    while(True):
-      cv2.imshow('',hog_img_scaled)
-      cv2.waitKey(10)
-
+def pyr(img , factor=0.15,levels=5): 
+    h,w = img.shape[:2] 
+    yield img.copy()
+    for level in np.arange(levels):
+      new_sz = (int(w-(w*factor)),int(h-(h*factor)))
+      w,h = new_sz
+      yield cv2.resize(img,new_sz)
 def main():
-    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste descriptor')
+    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste pyr')
     v = input()
     if v =='1':  
       evaluate_knn()
@@ -304,9 +324,27 @@ def main():
     elif v=='4':
       show_std() 
     elif v=='5':
-      teste_descriptor()   
-
+      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\testes_captures\2.jpg')
+      
+      rectAtLv2 = (130,60,150,220)
+      while True: 
+        i = 0
+        for resized in pyr(img,levels=2): 
+         if(i==2):
+           x,y,w,h = rectAtLv2
+           cv2.rectangle(resized,(x,y),(x+w,y+h),(0,255,0),2) 
+         elif(i==0):
+           origin_shape = 346, 462 #shape level 2 
+           x,y,w,h = scale_rect(origin_shape,resized.shape[:2],rectAtLv2) #rect reescaled from level 2 to 1
+           cv2.rectangle(resized,(x,y),(x+w,y+h),(0,255,0),2)    
+         cv2.imshow(str(i),resized)
+         i+= 1
+        k = cv2.waitKey(10)
+        if k==ord('q'):
+          break 
+      cv2.destroyAllWindows()  
 
 if __name__ == '__main__':
+    img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\testes_captures\2.jpg')
     main()
  
