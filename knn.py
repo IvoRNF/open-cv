@@ -285,7 +285,8 @@ def detect_mult_scale(img,threashold=170,winSize=(70,100),winStep=20,knn=None):
               min_distance = distance
            if distance <= threashold:
               return result   
-  return result         
+  return result  
+      
 def circular_center_points(frame): 
    middle_w = frame.shape[1]//2
    middle_h = frame.shape[0]//2
@@ -310,6 +311,23 @@ def pyr(img , factor=0.15,levels=5):
       new_sz = (int(w-(w*factor)),int(h-(h*factor)))
       w,h = new_sz
       yield cv2.resize(img,new_sz)
+def detect(img,knn,pyrLevels=3,min_distance=170,win_sz=(300,400)):
+  founded = None
+  frame = img.copy() 
+  if len(frame.shape)>2:
+    frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
+  min_founded = 9999   
+  for resized in pyr(frame,levels=pyrLevels):
+    for (x,y,w,h) in sliding_window(step_x=15,step_y=15,window_size=win_sz,y_end=frame.shape[0], x_end=frame.shape[1]):  
+        roi = resized[y:y+h,x:x+w]
+        if (roi.shape[0]==0) or (roi.shape[1]==0) :
+          continue 
+        response = knn.processAndPredict(roi)   
+        distance = np.sum ( np.squeeze(response[3]) )   
+        if (distance < min_founded) and (distance<=min_distance):
+             min_founded = distance
+             founded = (distance,resized.shape,(x,y,w,h))  
+  return founded        
 def main():
     print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste pyr')
     v = input()
@@ -322,48 +340,27 @@ def main():
     elif v=='4':
       show_std() 
     elif v=='5':
-      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\testes_captures\2.jpg')
+      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\testes_captures\24.jpg')
       knn = Knn()
       knn.run()
-      rectAtLv2 = (130,60,150,200)
-      wds = []
-      i = 0
-      origin_shape = 346, 462 #shape level 2 
-      x,y,w,h = scale_rect(origin_shape,img.shape[:2],rectAtLv2) #rect reescaled from level 2 to 1
-           
-      x_start = w - 80  
-      y_start = 0
-      y_end = img.shape[0] - img.shape[0]//7  
-      x_end = img.shape[1] - 300 
-      for win in sliding_window(step_x=15,step_y=15,window_size=(w,h),y_start=y_start,x_start=x_start,y_end=y_end,x_end=x_end):
-        wds.append(list(win))
-        if i == 220:
-           break 
-        i += 1
-      wds = np.array(wds) 
-      z = 0  
-      while True: 
-        i = 0
-        for resized in pyr(img,levels=3):    
-           if z == wds.shape[0]:
-             z = 0
-           _x,_y,_w,_h = wds[z]
-           z += 1
-           cv2.rectangle(resized,(_x,_y),(_x+_w,_y+_h),(0,255,0),2)  
-           
-           #for j in np.arange(10)
-           
-           
-           #roi = img[y:y+h,x:x+w]
-           #response = knn.processAndPredict(roi)
-           #predicted_class_idx = int(response[0] )
-           # print('achou %s' % (knn.class_names[predicted_class_idx]))
-           cv2.imshow(str(i),resized)
-           i+= 1
+      start_t = time.time()
+      resp = detect(img,knn,pyrLevels=3,min_distance=170,win_sz=(300,400)) 
+      print(resp)
+      print("--- %s seconds ---" % (time.time() - start_t))
+      if(resp==None):
+        return
+      distance, res,rect = resp
+      x,y,w,h = rect
+      cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
+      while(True):
+        cv2.imshow('',img)
         k = cv2.waitKey(10)
-        if k==ord('q'):
-          break 
+        if k == ord('q'):
+          break
       cv2.destroyAllWindows()  
+      
+      
+        
 
 if __name__ == '__main__':
     img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\testes_captures\2.jpg')
