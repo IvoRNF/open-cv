@@ -110,9 +110,9 @@ class OpenCvTests:
     cv2.destroyAllWindows()
     capture.release()
 
-  def backgroundSubtractor(self,callback = None):
-    capture = cv2.VideoCapture(0)
-    bkSubtractor = cv2.createBackgroundSubtractorKNN(detectShadows=False)
+  def backgroundSubtractor(self,callback = None,capture_file=0):
+    capture = cv2.VideoCapture(capture_file)
+    bkSubtractor = cv2.createBackgroundSubtractorKNN(detectShadows=True)
     erode_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(7,5))
     dilate_kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE,(17,11))
     captured,frame = capture.read()
@@ -130,7 +130,7 @@ class OpenCvTests:
                 biggest_contour = contour
       x,y,w,h = cv2.boundingRect(biggest_contour)
       
-      k = cv2.waitKey(30)
+      k = cv2.waitKey(10)
       if callback is not None:
         rect = (x,y,w,h)
         callback(frame,rect,k)
@@ -386,9 +386,16 @@ class OpenCvTests:
       roi = frame[y:y+h,x:x+w]
       self.snapshotIdx = self.snapshotIdx + 1
       cv2.imwrite('snapshot%d.jpg' % (self.snapshotIdx) ,roi)
+
+def on_get_rect(frame,rect,k):
+  x,y,w,h = rect
+  if w > h:
+    return
+  cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),1)
+
 def main():
    cv = OpenCvTests() 
-   cv.captureVideoCamera(60,'./my_captures.avi')
+   cv.backgroundSubtractor(callback=on_get_rect,capture_file=r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\my_captures.avi')
 if __name__ == '__main__':
     main()
 

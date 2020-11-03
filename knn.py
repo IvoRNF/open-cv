@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 from skimage.feature import hog
 from skimage import exposure
 from file_loader import FileLoader
+import dlib 
 
 class Knn(FileLoader):
     
@@ -92,69 +93,50 @@ def real_time_test():
    knn = Knn()
    knn.run()
    capture = cv2.VideoCapture(0)
-   sucess,frame = capture.read()
+   success,frame = capture.read()
    center_pt = (frame.shape[1]//2,frame.shape[0]//2)
    x_center,y_center = center_pt
    curr_rect = None
-   sliding_rects = [ ]
    i = 0
    for curr_rect in middleRects(frame.shape,center_x=x_center,center_y=y_center):
       if i == 3:
-        sliding_rects.append(list(curr_rect))
         break
       i+=1
-
-   x,y,w,h = tuple(sliding_rects[0])
-   x = w//4
-   y = h//4
-   x_step = 10
-   y_step = 10
-   for _ in np.arange(6):
-      sliding_rects.append(list((x,y,w,h)))
-      x += x_step
-   x,y,w,h = curr_rect
-   for _ in np.arange(6):
-      y += y_step 
-      for _ in np.arange(6):
-        sliding_rects.append(list((x,y,w,h)))
-        x += y_step
-   sliding_rects = np.array(sliding_rects)
-   sliding_rects_sz = sliding_rects.shape[0] 
-   print(sliding_rects_sz)
-   print(sliding_rects)
-   i = 0
-   found_rect_idx = -1
-   while (sucess):
+   tracker = None   
+   while (success):
       frame_cpy = frame.copy() 
-      cv2.circle(frame_cpy,(x_center,y_center),10,(0,255,255),1)
-      
+      cv2.circle(frame_cpy,(x_center,y_center),10,(0,255,255),1)      
       k = cv2.waitKey(5)
       if k == ord('q'):
           break
-      sucess,frame = capture.read()
-      if(i==sliding_rects_sz):
-        i = 0 
-      x,y,w,h = tuple(sliding_rects[i])
-      if(found_rect_idx == -1):
-        center_rect = sliding_rects[0]
-        _x,_y,_w,_h = center_rect
-        cv2.rectangle(frame_cpy,(_x,_y),(_x+_w,_y+_h),(0,255,0),1)
-        #i+=1
+      success,frame = capture.read()
+      x,y,w,h = curr_rect
+      cv2.rectangle(frame_cpy,(x,y),(x+w,y+h),(0,255,0),2)
       roi = frame[y:y+h,x:x+w]
-      #if(found_rect_idx == -1):
-        #cv2.rectangle(frame_cpy,(x,y),(x+w,y+h),(255,0,0),1)  
       response = knn.processAndPredict(roi)
       distance = np.sum ( np.squeeze(response[3]) )
       
       if(distance < min_distance):
-        found_rect_idx = i
-        cv2.rectangle(frame_cpy,(x,y),(x+w,y+h),(0,255,0),1)  
+        tracker = dlib.correlation_tracker()
+        t_rect = dlib.rectangle(x,y,x+w,y+h)
+        tracker.start_track( cv2.cvtColor(frame,cv2.COLOR_BGR2RGB) ,t_rect)
+        cv2.rectangle(frame_cpy,(x,y),(x+w,y+h),(0,255,0),2)  
         class_idx = int(response[0])
         class_name = knn.class_names[class_idx]
         txt = '%s(%.2f)' % (class_name,distance) 
         cv2.putText(frame_cpy,txt,(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2) 
-      else:
-        found_rect_idx = -1 
+      else: 
+        if tracker is not None: 
+           tracker.update(cv2.cvtColor(frame,cv2.COLOR_BGR2RGB))  
+           pos = tracker.get_position()
+           frame_cpy = frame.copy()
+           #roi = frame[int(pos.top()):int(pos.bottom()),int(pos.left()):int(pos.right())]
+           #response = knn.processAndPredict(roi)
+           #distance = np.sum ( np.squeeze(response[3]) )
+           #if(distance < min_distance):
+           cv2.rectangle(frame_cpy,(int(pos.left()),int(pos.top())),(int(pos.right()),int(pos.bottom())),(0,255,0),2) 
+           #else: 
+           # tracker = None    
       cv2.imshow('',frame_cpy)  
    capture.release()   
    cv2.destroyAllWindows()    
