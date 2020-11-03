@@ -98,8 +98,9 @@ def real_time_test():
    x_center,y_center = center_pt
    curr_rect = None
    i = 0
+   not_found_count = 0
    for curr_rect in middleRects(frame.shape,center_x=x_center,center_y=y_center):
-      if i == 3:
+      if i == 2:
         break
       i+=1
    tracker = None   
@@ -130,13 +131,22 @@ def real_time_test():
            tracker.update(cv2.cvtColor(frame,cv2.COLOR_BGR2RGB))  
            pos = tracker.get_position()
            frame_cpy = frame.copy()
-           #roi = frame[int(pos.top()):int(pos.bottom()),int(pos.left()):int(pos.right())]
-           #response = knn.processAndPredict(roi)
-           #distance = np.sum ( np.squeeze(response[3]) )
-           #if(distance < min_distance):
-           cv2.rectangle(frame_cpy,(int(pos.left()),int(pos.top())),(int(pos.right()),int(pos.bottom())),(0,255,0),2) 
-           #else: 
-           # tracker = None    
+           roi = frame[int(pos.top()):int(pos.bottom()),int(pos.left()):int(pos.right())]
+           if(roi.shape[0]==0)or(roi.shape[1]==0):
+              distance = 99999
+           else:
+              response = knn.processAndPredict(roi)
+              distance = np.sum ( np.squeeze(response[3]) )
+           if(distance < min_distance):
+               not_found_count = 0
+               txt = '%s(%.2f)' % (class_name,distance) 
+               cv2.putText(frame_cpy,txt,(int(pos.left()),int(pos.top())),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
+           else:
+             not_found_count += 1
+             if not_found_count==150: #para de perseguir depois de 150 frames com roi nao detectado
+               not_found_count =0
+               tracker = None
+           cv2.rectangle(frame_cpy,(int(pos.left()),int(pos.top())),(int(pos.right()),int(pos.bottom())),(0,255,0),2)    
       cv2.imshow('',frame_cpy)  
    capture.release()   
    cv2.destroyAllWindows()    
