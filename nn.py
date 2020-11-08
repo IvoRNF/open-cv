@@ -1,9 +1,6 @@
 import cv2 
-try:
-  import tensorflow as tf 
-  print('tensorflow loaded')
-except:
-    print('tensorflow not loaded.') 
+
+import tensorflow as tf
 
 
 if __name__ == '__main__': 
