@@ -48,10 +48,10 @@ class MyNeuralNetwork:
             idx = idx % self.inputs.shape[0]
             i += 1     
     def predict(self,input_vl):         
-        sop = self.weights[0] * 1 + self.weights[1] * input_vl
+        z = self.weights[0] * 1 + self.weights[1] * input_vl
         func_name = self.activation_func
         func = getattr(self,func_name)
-        return func(sop)
+        return func(z)
 if __name__ == '__main__': 
     inputs = np.array([3,4,7,10])
     outputs = np.array([9,12,21,30])  
