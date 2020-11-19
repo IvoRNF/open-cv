@@ -3,9 +3,10 @@ import numpy as np
 
 class MyNeuralNetwork:
 
-    def __init__(self,max_iterations=2000,learning_rate = 0.0001):
+    def __init__(self,max_iterations=1000,learning_rate = 0.0001,activation_func='relu'):
         self.max_iterations= max_iterations
         self.learning_rate = learning_rate
+        self.activation_func = activation_func
 
     def fit(self,x:np.ndarray,y:np.ndarray):
         self.inputs = x 
@@ -45,16 +46,18 @@ class MyNeuralNetwork:
             self.update_weights(predicted,idx)
             idx += 1 
             idx = idx % self.inputs.shape[0]
-            i += 1  
+            i += 1     
     def predict(self,input_vl):         
-        z = self.weights[0] * 1 + self.weights[1] * input_vl
-        return self.relu(z)
+        sop = self.weights[0] * 1 + self.weights[1] * input_vl
+        func_name = self.activation_func
+        func = getattr(self,func_name)
+        return func(sop)
 if __name__ == '__main__': 
-    inputs = np.array([4,5,7,10])
-    outputs = np.array([8,10,14,20])  
+    inputs = np.array([3,4,7,10])
+    outputs = np.array([9,12,21,30])  
     nn = MyNeuralNetwork()
     nn.fit(x=inputs,y=outputs)
     print('Weights ',nn.weights)
     for input_vl in [20,30,40,50,2,5]:
         predicted = nn.predict(input_vl)
-        print('%.2f predicted as %.2f' % (input_vl,predicted))
+        print('%.2f predicted as %.2f' % (input_vl,np.round(predicted)))
