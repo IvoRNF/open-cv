@@ -29,10 +29,9 @@ class MyNeuralNetwork:
          return  np.power(desired-predicted,2)
 
     def relu(self,input_vl):
-        if input_vl < 0: 
-            return 0
-        else: 
-            return input_vl     
+        result = input_vl
+        result[result < 0] = 0 
+        return result 
     def sigmoid(self,input_vl):
         return 1.0/(1+np.power(np.e,-1 * input_vl) )    
 
@@ -61,7 +60,7 @@ class MyNeuralNetwork:
         z = self.weights[0] * 1 + self.weights[1] * input_vl[0]
         func_name = self.activation_func
         func = getattr(self,func_name)
-        return func(z)
+        return func(np.array([z]))
 if __name__ == '__main__': 
     inputs = np.array([[3],[4],[7],[10]])
     outputs = np.array([[9],[12],[21],[30]])  
