@@ -10,10 +10,13 @@ class MyNeuralNetwork:
         self.hidden_layer_sizes = hidden_layer_sizes
         self.output_layer_size = output_layer_size
 
+
+    def isLinear(self): 
+        return (self.hidden_layer_sizes is None)
     def fit(self,x:np.ndarray,y:np.ndarray):
         self.inputs = x 
         self.desired_outputs = y
-        if self.hidden_layer_sizes is None: #no hidden layer 
+        if self.isLinear(): 
            self.weights = np.random.uniform(low=-0.1,high=0.1,size=( self.inputs.shape[1] )) 
         else: 
           last_input_sz =  self.inputs.shape[1]
@@ -47,6 +50,20 @@ class MyNeuralNetwork:
         abs_error = 1 
         idx = 0 
         i= 0 
+        if not self.isLinear(): 
+
+           while(i < self.max_iterations): 
+              input_ = self.inputs[idx]  
+              for j in range( len(self.weights)-1 ): 
+                  input_ = self.predict(input_ , j)
+              input_ = input_ * self.weights[-1]
+              
+              idx += 1 
+              idx = idx % self.inputs.shape[0]
+              i += 1   
+
+ 
+           return 
         while (i < self.max_iterations) or (abs_error>=0.01)  : 
             predicted = self.predict(self.inputs[idx])
             error = self.square_error(self.desired_outputs[idx][0],predicted[0])
@@ -54,9 +71,13 @@ class MyNeuralNetwork:
             self.update_weights(predicted,idx)
             idx += 1 
             idx = idx % self.inputs.shape[0]
-            i += 1     
-    def predict(self,input_vl):         
-        arr = input_vl * self.weights
+            i += 1   
+
+    def predict(self,input_vl,weight_idx=None):         
+        if weight_idx is None:
+          arr = input_vl * self.weights
+        else:
+          arr =  input_vl * self.weights[i]
         func_name = self.activation_func
         func = getattr(self,func_name)
         return func(arr)
