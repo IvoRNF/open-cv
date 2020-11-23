@@ -77,7 +77,7 @@ class MyNeuralNetwork:
         if weight_idx is None:
           arr = input_vl * self.weights
         else:
-          arr =  input_vl * self.weights[i]
+          arr =  input_vl * self.weights[weight_idx]
         func_name = self.activation_func
         func = getattr(self,func_name)
         return func(arr)
