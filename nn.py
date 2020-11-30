@@ -9,6 +9,7 @@ class MyNeuralNetwork:
         self.activation_func = activation_func
         self.hidden_layer_sizes = hidden_layer_sizes
         self.output_layer_size = output_layer_size
+        self.logging = True
  
     def softmax(self,inpt):
        return np.exp(inpt)/np.sum( np.exp(inpt) )
@@ -26,7 +27,6 @@ class MyNeuralNetwork:
 
     def loss_func(self,desired,predicted): 
          return  0.5 * np.power(desired-predicted,2)
-
     def relu(self,input_vl):
         result = input_vl
         result[result < 0] = 0 
@@ -46,7 +46,8 @@ class MyNeuralNetwork:
             self.weights = self.weights + (self.learning_rate * np.abs(der_magn))  
         '''    
     def log(self,msg):
-        print(msg)
+        if self.logging:
+           print(msg)
     
     
     def train(self): 
@@ -55,7 +56,9 @@ class MyNeuralNetwork:
         self.log('training')
         while (i < self.max_iterations): 
               predicted = self.predict(self.inputs[idx])
-              error = self.loss_func(self.desired_outputs[idx],predicted)
+              predicted = np.max(predicted)
+              desired = np.max(self.desired_outputs[idx])
+              error = self.loss_func(desired,predicted)
               self.log('sample')
               self.log(self.inputs[idx])
               self.log('predicted')
@@ -84,7 +87,7 @@ class MyNeuralNetwork:
 if __name__ == '__main__': 
     inputs_train = np.array([[0,0,255],[0,255,0],[0,0,255],[0,0,255]])
     outputs_train = np.array([[1,0],[0,1],[1,0],[1,0]])  
-    nn = MyNeuralNetwork(hidden_layer_sizes=np.array([3]),output_layer_size=2,max_iterations=50)
+    nn = MyNeuralNetwork(hidden_layer_sizes=np.array([3]),output_layer_size=2,max_iterations=2000,activation_func='sigmoid')
     nn.fit(x=inputs_train,y=outputs_train)
     print('Weights ',nn.weights)
     inputs_test = np.array([[0,255,0]])
