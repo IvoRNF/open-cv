@@ -95,14 +95,14 @@ class MyNeuralNetwork:
         for i in range(len(self.weights)):
             wts = self.weights[i]
             out_in = np.dot(out_in,wts)
-            print('multiply')
+            #print('multiply')
             if self.is_odd_or_zero(i): 
                out_in = func(out_in)
-               print('activate')
+               #print('activate')
         return out_in       
 if __name__ == '__main__': 
     inputs_train = np.array([[0,0,255],[0,255,0],[0,0,255],[0,0,255]])
-    outputs_train = np.array([0,1,0,0])  
+    outputs_train = np.array([[1,0],[0,1],[1,0],[1,0]])  
     nn = MyNeuralNetwork(hidden_layer_sizes=np.array([3,3]),output_layer_size=2)
     nn.fit(x=inputs_train,y=outputs_train)
     print('Weights ',nn.weights)
