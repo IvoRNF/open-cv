@@ -93,4 +93,5 @@ if __name__ == '__main__':
        print(w)
       except:
          break
+    print(ann.ann.getLayerSizes())  
        
