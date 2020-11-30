@@ -68,7 +68,7 @@ if __name__ == '__main__':
     ann = TraineerAnn() 
     ann.epochs = 1000
     ann.fit(x=[[0,0,255],[0,255,0],[0,0,255],[0,0,255]],y=[[1,0],[0,1],[1,0],[1,0]])
-    print('ok')
+    
 
     test = [
        [0,0,255],
@@ -80,9 +80,17 @@ if __name__ == '__main__':
     expected = [0,1,1,0,1]
     for sample,target in zip(test,expected): 
        label,propab = ann.predict(sample)
-       print(propab)
-       print(sample) 
-       print(label)
-       print(target)
-       print('...')
-
+       if label != target:
+         print(propab)
+         print(sample) 
+         print(label)
+         print(target)
+         print('...')
+    print('ok')     
+    for i in range(10): 
+      try:
+       w = ann.ann.getWeights(i)
+       print(w)
+      except:
+         break
+       
