@@ -9,6 +9,7 @@ def log(msg):
     print(msg) 
 
 x = np.array([[0,0,255],[0,255,0],[0,0,255],[0,0,255]])
+target = np.array([0,1,0,0])
 
 log(x.shape)
 
@@ -45,9 +46,14 @@ def multiply(msg,inpt,weights):
     log(y.shape)
     return y
 
+def softmax(inpt):
+    return np.exp(inpt)/np.sum( np.exp(inpt) )    
+
 def predict(inpt):
     y = multiply(msg='mutiplield by the input weights',inpt=sample,weights=weights[0]) 
+    y = softmax(y)
     y = multiply(msg='mutiplield by the first hidden layer weights',inpt=y,weights=weights[1])
+    y = softmax(y)
     y = multiply(msg='multiplield by then second hidden layer weights',inpt=y,weights=weights[2])
     return y 
 sample = x[0]

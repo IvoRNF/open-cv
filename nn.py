@@ -3,7 +3,7 @@ import numpy as np
 
 class MyNeuralNetwork:
 
-    def __init__(self,max_iterations=1000,learning_rate = 0.0001,activation_func='relu',hidden_layer_sizes=None, output_layer_size=0):
+    def __init__(self,max_iterations=1000,learning_rate = 0.0001,activation_func='softmax',hidden_layer_sizes=None, output_layer_size=0):
         self.max_iterations= max_iterations
         self.learning_rate = learning_rate
         self.activation_func = activation_func
@@ -13,6 +13,10 @@ class MyNeuralNetwork:
 
     def isLinear(self): 
         return (self.hidden_layer_sizes is None)
+    
+    def softmax(self,inpt):
+       return np.exp(inpt)/np.sum( np.exp(inpt) )
+
     def fit(self,x:np.ndarray,y:np.ndarray):
         self.inputs = x 
         self.desired_outputs = y
@@ -51,7 +55,7 @@ class MyNeuralNetwork:
         idx = 0 
         i= 0 
         if not self.isLinear(): 
-
+           '''
            while(i < self.max_iterations): 
               input_ = self.inputs[idx]  
               for j in range( len(self.weights)-1 ): 
@@ -61,7 +65,7 @@ class MyNeuralNetwork:
               idx += 1 
               idx = idx % self.inputs.shape[0]
               i += 1   
-
+            '''
  
            return 
         while (i < self.max_iterations) or (abs_error>=0.01)  : 
@@ -73,25 +77,38 @@ class MyNeuralNetwork:
             idx = idx % self.inputs.shape[0]
             i += 1   
 
-    def predict(self,input_vl,weight_idx=None):         
-        if weight_idx is None:
-          arr = input_vl * self.weights
-        else:
-          arr =  input_vl * self.weights[weight_idx]
+    def is_odd_or_zero(self,n):
+        if n==0:
+           return True  
+        return (n % 2)!=0
+    def predict(self,input_vl,weight_idx=None):  
+               
         func_name = self.activation_func
         func = getattr(self,func_name)
-        return func(arr)
+        if self.isLinear():
+            if weight_idx is None:
+               arr = input_vl * self.weights
+            else:
+               arr =  input_vl * self.weights[weight_idx]
+            return func(arr)
+        out_in = input_vl
+        for i in range(len(self.weights)):
+            wts = self.weights[i]
+            out_in = np.dot(out_in,wts)
+            print('multiply')
+            if self.is_odd_or_zero(i): 
+               out_in = func(out_in)
+               print('activate')
+        return out_in       
 if __name__ == '__main__': 
-    inputs_train = np.array([[3],[4],[7],[10]])
-    outputs_train = np.array([[6],[8],[14],[20]])  
-    nn = MyNeuralNetwork()#hidden_layer_sizes=np.array([150,60]),output_layer_size=4)
+    inputs_train = np.array([[0,0,255],[0,255,0],[0,0,255],[0,0,255]])
+    outputs_train = np.array([0,1,0,0])  
+    nn = MyNeuralNetwork(hidden_layer_sizes=np.array([3,3]),output_layer_size=2)
     nn.fit(x=inputs_train,y=outputs_train)
     print('Weights ',nn.weights)
-    inputs_test = np.array([[20],[30],[40],[50],[2],[5]])
+    inputs_test = np.array([[0,0,255]])
     predicted_vls = nn.predict(inputs_test)
-    i = 0 
-    for predicted in predicted_vls:     
-      print('%.2f predicted as %.2f' % (inputs_test[i],np.round(predicted)))
-      i += 1 
+    print('predicted')
+    print(predicted_vls) 
 
     
