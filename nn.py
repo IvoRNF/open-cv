@@ -42,8 +42,28 @@ class MyNeuralNetwork:
             result = 0 
         return result 
     def sigmoid(self,input_vl): 
-        return 1.0/(1.0+np.exp(-1 * input_vl))    
+        return 1.0/(1.0+np.exp(-1 * input_vl)) 
 
+
+    def backward_propagate_error(self,expected):
+        for i in reversed(range(len(self.weights))):
+            layer = self.weights[i]
+            errors = []
+            if i != len(self.weights)-1:
+                for j in range(len(layer)):
+                    err = 0.0
+                    for nextLayer in self.weights[i + 1]:
+                        err += (nextLayer[j] * self.neurons_metadata[i+1][j]['delta'])
+                    errors.append(err)
+            else:
+                for j in range(len(layer)):
+                    neuron = layer[j]
+                    loss = self.loss_func(expected[j] , neuron[i][j]['output'])
+                    errors.append( loss )
+            for j in range(len(layer)):
+                neuron = layer[j]
+                self.neurons_metadata[i][j]['delta'] = 
+                      errors[j] * (neuron[i][j]['output'] * (1 - neuron[i][j]['output']))  #transfer derivative     
     def update_weights(self,predicted , idx): 
         '''
         der_magn = 0    #backpropagation
@@ -106,6 +126,7 @@ if __name__ == '__main__':
     predicted_vls = nn.predict(inputs_test)
     print(nn.weights)
     print(predicted_vls) 
+    nn.backward_propagate_error([0,1])
     print(nn.neurons_metadata) 
     
 
