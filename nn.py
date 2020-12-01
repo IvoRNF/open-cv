@@ -70,7 +70,8 @@ class MyNeuralNetwork:
             layer = self.weights[i]
             inputs = inpt[:-1] # remove o bias ?
             if i != 0:
-                inputs = [ self.neurons_metadata[i][j]['output'] for j in range(len(self.weights[i - 1]))]
+                previous_layer = self.weights[i - 1]
+                inputs = [ self.neurons_metadata[i][j]['output'] for j in range(len(previous_layer))]
             for j in range(len(layer)):
                 delta = self.neurons_metadata[i][j]['delta']
                 for k in range(len(inputs)):
