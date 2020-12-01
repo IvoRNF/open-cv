@@ -3,13 +3,13 @@ import numpy as np
 
 class MyNeuralNetwork:
 
-    def __init__(self,max_iterations=1000,learning_rate = 0.0001,activation_func='softmax',hidden_layer_sizes=None, output_layer_size=0):
+    def __init__(self,max_iterations=1000,learning_rate = 0.0001,activation_func='softmax',n_hidden_layers=1, output_layer_size=0):
         self.max_iterations= max_iterations
         self.learning_rate = learning_rate
         self.activation_func = activation_func
-        self.hidden_layer_sizes = hidden_layer_sizes
+        self.n_hidden_layers = n_hidden_layers
         self.output_layer_size = output_layer_size
-        self.logging = True
+        self.logging = False
  
     def softmax(self,inpt):
        return np.exp(inpt)/np.sum( np.exp(inpt) )
@@ -17,19 +17,29 @@ class MyNeuralNetwork:
     def fit(self,x:np.ndarray,y:np.ndarray):
         self.inputs = x 
         self.desired_outputs = y
-        last_input_sz =  self.inputs.shape[1]
+        neuron_count =  self.inputs.shape[1]
         self.weights = []
-        for neuron_count in [*self.hidden_layer_sizes,self.output_layer_size]: 
-            weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(last_input_sz,neuron_count))
-            self.weights.append(weights_of_layer) 
-            last_input_sz = neuron_count          
-        self.train() 
+        for _ in range(self.n_hidden_layers): 
+            weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(neuron_count  + 1))
+            self.weights.append([weights_of_layer]) 
+        output_layer_wts = []    
+        for _ in range(self.output_layer_size): 
+            weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(self.n_hidden_layers  + 1))
+            output_layer_wts.append(weights_of_layer)
+        self.weights.append(output_layer_wts)   
+        self.neurons_metadata = []
+        for layer in self.weights: 
+            arr = []
+            for _ in layer:
+                arr.append({})
+            self.neurons_metadata.append(arr) 
 
     def loss_func(self,desired,predicted): 
          return  0.5 * np.power(desired-predicted,2)
     def relu(self,input_vl):
         result = input_vl
-        result[result < 0] = 0 
+        if result < 0:
+            result = 0 
         return result 
     def sigmoid(self,input_vl): 
         return 1.0/(1.0+np.exp(-1 * input_vl))    
@@ -69,30 +79,36 @@ class MyNeuralNetwork:
               idx += 1 
               idx = idx % self.inputs.shape[0]
               i += 1   
-
-    def is_odd_or_zero(self,n):
-        if n==0:
-           return True  
-        return (n % 2)!=0
-    def predict(self,input_vl,weight_idx=None):  
+    def predict(self,input_vl):  
         func_name = self.activation_func
         func = getattr(self,func_name)
         out_in = input_vl
-        for i in range(len(self.weights)):
-            wts = self.weights[i]
-            out_in = np.dot(out_in,wts)
-            if self.is_odd_or_zero(i): 
-               out_in = func(out_in)
-        return out_in       
+        for i in range(len(self.weights)): 
+            layer_w = self.weights[i]
+            new_inputs = []
+            for j in range(len(layer_w)):
+                neuron = layer_w[j] 
+                activ = neuron[-1] # bias 
+                for k in range(neuron.shape[0]-1):
+                   activ += neuron[k] * out_in[k]
+                activ = func(activ)   
+                new_inputs.append(activ)
+                self.neurons_metadata[i][j]['output'] = activ 
+            out_in = new_inputs
+        return out_in    
 if __name__ == '__main__': 
-    inputs_train = np.array([[0,0,255],[0,255,0],[0,0,255],[0,0,255]])
+    inputs_train = np.array([[0,255],[255,0],[0,255],[0,255]])
     outputs_train = np.array([[1,0],[0,1],[1,0],[1,0]])  
-    nn = MyNeuralNetwork(hidden_layer_sizes=np.array([3]),output_layer_size=2,max_iterations=2000,activation_func='sigmoid')
+    nn = MyNeuralNetwork(n_hidden_layers=1,output_layer_size=2,max_iterations=2000,activation_func='sigmoid')
     nn.fit(x=inputs_train,y=outputs_train)
-    print('Weights ',nn.weights)
-    inputs_test = np.array([[0,255,0]])
+    #nn.train()
+    inputs_test = np.array([255,0])
     predicted_vls = nn.predict(inputs_test)
-    print('predicted')
+    print(nn.weights)
     print(predicted_vls) 
+    print(nn.neurons_metadata) 
+    
+
+
 
     
