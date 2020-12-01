@@ -74,7 +74,7 @@ class MyNeuralNetwork:
             for j in range(len(layer)):
                 delta = self.neurons_metadata[i][j]['delta']
                 for k in range(len(inputs)):
-                    self.weights[i][j][k] += self.learning_rate * delta * inputs[j]
+                    self.weights[i][j][k] += self.learning_rate * delta * inputs[k]
                 self.weights[i][j][-1] += self.learning_rate * delta  
         
     def log(self,msg):
