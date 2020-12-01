@@ -9,7 +9,7 @@ class MyNeuralNetwork:
         self.activation_func = activation_func
         self.n_hidden_layers = n_hidden_layers
         self.output_layer_size = output_layer_size
-        self.logging = False
+        self.logging = True
  
     def softmax(self,inpt):
        return np.exp(inpt)/np.sum( np.exp(inpt) )
@@ -32,7 +32,8 @@ class MyNeuralNetwork:
             arr = []
             for _ in layer:
                 arr.append({})
-            self.neurons_metadata.append(arr) 
+            self.neurons_metadata.append(arr)
+        self.train()     
 
     def loss_func(self,desired,predicted): 
          return  0.5 * np.power(desired-predicted,2)
@@ -81,27 +82,18 @@ class MyNeuralNetwork:
     def log(self,msg):
         if self.logging:
            print(msg)
-    
-    
     def train(self): 
         idx = 0 
         i= 0 
         self.log('training')
         while (i < self.max_iterations): 
-              predicted = self.predict(self.inputs[idx])
-              predicted = np.max(predicted)
-              desired = np.max(self.desired_outputs[idx])
-              error = self.loss_func(desired,predicted)
-              self.log('sample')
-              self.log(self.inputs[idx])
-              self.log('predicted')
-              self.log(predicted)
-              self.log('error')
-              self.log(error)
-              self.update_weights(predicted,idx)
+              #predicted = self.predict(self.inputs[idx])
+              self.backward_propagate_error(self.desired_outputs[idx])
+              self.update_weights(self.inputs[idx])
               idx += 1 
               idx = idx % self.inputs.shape[0]
               i += 1   
+        self.log('trained')      
     def predict(self,input_vl):  
         func_name = self.activation_func
         func = getattr(self,func_name)
@@ -120,17 +112,18 @@ class MyNeuralNetwork:
             out_in = new_inputs
         return out_in    
 if __name__ == '__main__': 
-    inputs_train = np.array([[0,255],[255,0],[0,255],[0,255]])
-    outputs_train = np.array([[1,0],[0,1],[1,0],[1,0]])  
-    nn = MyNeuralNetwork(n_hidden_layers=1,output_layer_size=2,max_iterations=2000,activation_func='sigmoid')
+    inputs_train = np.array([[0,255],[255,0],[255,0],[255,0],[0,255],[0,255]])
+    outputs_train = np.array([[1,0],[0,1],[0,1],[0,1],[1,0],[1,0]])  
+    nn = MyNeuralNetwork(n_hidden_layers=1,output_layer_size=2,max_iterations=10000,activation_func='sigmoid',learning_rate=0.3)
     nn.fit(x=inputs_train,y=outputs_train)
-    #nn.train()
-    inputs_test = np.array([255,0])
-    predicted_vls = nn.predict(inputs_test)
-    print(nn.weights)
-    print(predicted_vls) 
-    nn.backward_propagate_error([0,1])
-    print(nn.neurons_metadata) 
+
+
+    for inpt,outpt in zip(inputs_train,outputs_train): 
+        predicted_vls = nn.predict(inpt)
+        predicted_num = np.argmax(predicted_vls)
+        expected_num = np.argmax(outpt)
+        print('%d predicted as %d ' % (expected_num,predicted_num))
+        print(predicted_vls)
     
 
 
