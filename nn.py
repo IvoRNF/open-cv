@@ -56,25 +56,27 @@ class MyNeuralNetwork:
                         err += (nextLayer[j] * self.neurons_metadata[i+1][j]['delta'])
                     errors.append(err)
             else:
-                for j in range(len(layer)):
-                    neuron = layer[j]
-                    loss = self.loss_func(expected[j] , neuron[i][j]['output'])
+                for j in range(len(layer)):   
+                    output = self.neurons_metadata[i][j]['output']
+                    loss = expected[j] - output
                     errors.append( loss )
             for j in range(len(layer)):
-                neuron = layer[j]
-                self.neurons_metadata[i][j]['delta'] = 
-                      errors[j] * (neuron[i][j]['output'] * (1 - neuron[i][j]['output']))  #transfer derivative     
-    def update_weights(self,predicted , idx): 
-        '''
-        der_magn = 0    #backpropagation
-        der_magn = (self.inputs[idx][0] * (2 * (predicted[0] - self.desired_outputs[idx][0])))
-        if der_magn==0:
-            return 
-        elif der_magn> 0:
-            self.weights = self.weights - (self.learning_rate * np.abs(der_magn))  
-        else:
-            self.weights = self.weights + (self.learning_rate * np.abs(der_magn))  
-        '''    
+                output = self.neurons_metadata[i][j]['output']
+                #transfer derivative
+                self.neurons_metadata[i][j]['delta'] = errors[j] * (output * (1 - output))       
+
+    def update_weights(self,inpt):
+        for i in range(len(self.weights)):
+            layer = self.weights[i]
+            inputs = inpt[:-1] # remove o bias ?
+            if i != 0:
+                inputs = [ self.neurons_metadata[i][j]['output'] for j in range(len(self.weights[i - 1]))]
+            for j in range(len(layer)):
+                delta = self.neurons_metadata[i][j]['delta']
+                for k in range(len(inputs)):
+                    self.weights[i][j][k] += self.learning_rate * delta * inputs[j]
+                self.weights[i][j][-1] += self.learning_rate * delta  
+        
     def log(self,msg):
         if self.logging:
            print(msg)
