@@ -45,7 +45,7 @@ class GeneticAlgorithm:
            self.sortByBestFitness()
 
            parents_for_mating = self.solutions[0:self.num_parents_for_mating] #best individuals
-           offspring = self.crossover(parents_for_mating, (self.solutions.shape[0] - parents_for_mating[0],self.solutions.shape[1] ) )
+           offspring = self.crossover(parents_for_mating, (self.solutions.shape[0] - parents_for_mating.shape[0],self.solutions.shape[1] ) )
 
            i+=1 
 
