@@ -82,3 +82,4 @@ if __name__ == '__main__':
     print('...')
     print(ga.fitness_vls)
     print('____')
+    print( ga.fitness_value( ga.solutions[0]))
