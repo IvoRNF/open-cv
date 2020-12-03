@@ -20,11 +20,11 @@ class MyNeuralNetwork:
         neuron_count =  self.inputs.shape[1]
         self.weights = []
         for _ in range(self.n_hidden_layers): 
-            weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(neuron_count  + 1))
+            weights_of_layer = np.random.uniform(low=0,high=0.1,size=(neuron_count  + 1))
             self.weights.append([weights_of_layer]) 
         output_layer_wts = []    
         for _ in range(self.output_layer_size): 
-            weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(self.n_hidden_layers  + 1))
+            weights_of_layer = np.random.uniform(low=0,high=0.1,size=(self.n_hidden_layers  + 1))
             output_layer_wts.append(weights_of_layer)
         self.weights.append(output_layer_wts)   
         self.neurons_metadata = []
@@ -53,8 +53,9 @@ class MyNeuralNetwork:
             if i != len(self.weights)-1:
                 for j in range(len(layer)):
                     err = 0.0
-                    for nextLayer in self.weights[i + 1]:
-                        err += (nextLayer[j] * self.neurons_metadata[i+1][j]['delta'])
+                    for k in range( len(self.weights[i + 1]) ):
+                        neur = self.weights[i + 1][k]
+                        err += (neur[j] * self.neurons_metadata[i+1][k]['delta'])
                     errors.append(err)
             else:
                 for j in range(len(layer)):   
@@ -64,12 +65,12 @@ class MyNeuralNetwork:
             for j in range(len(layer)):
                 output = self.neurons_metadata[i][j]['output']
                 #transfer derivative
-                self.neurons_metadata[i][j]['delta'] = errors[j] * (output * (1 - output))       
+                self.neurons_metadata[i][j]['delta'] = errors[j] * output * (1 - output)       
 
     def update_weights(self,inpt):
         for i in range(len(self.weights)):
             layer = self.weights[i]
-            inputs = inpt[:-1] # remove o bias ?
+            inputs = inpt#[:-1] # remove o bias ?
             if i != 0:
                 previous_layer = self.weights[i - 1]
                 inputs = [ self.neurons_metadata[i][j]['output'] for j in range(len(previous_layer))]
@@ -83,15 +84,13 @@ class MyNeuralNetwork:
         if self.logging:
            print(msg)
     def train(self): 
-        idx = 0 
         i= 0 
         self.log('training')
         while (i < self.max_iterations): 
-              #predicted = self.predict(self.inputs[idx])
-              self.backward_propagate_error(self.desired_outputs[idx])
-              self.update_weights(self.inputs[idx])
-              idx += 1 
-              idx = idx % self.inputs.shape[0]
+              for inpt,desired_outpt in zip(self.inputs,self.desired_outputs):
+                  self.predict(inpt)
+                  self.backward_propagate_error(desired_outpt)
+                  self.update_weights(inpt)
               i += 1   
         self.log('trained')      
     def predict(self,input_vl):  
@@ -114,7 +113,7 @@ class MyNeuralNetwork:
 if __name__ == '__main__': 
     inputs_train = np.array([[0,255],[255,0],[255,0],[255,0],[0,255],[0,255]])
     outputs_train = np.array([[1,0],[0,1],[0,1],[0,1],[1,0],[1,0]])  
-    nn = MyNeuralNetwork(n_hidden_layers=1,output_layer_size=2,max_iterations=10000,activation_func='sigmoid',learning_rate=0.3)
+    nn = MyNeuralNetwork(n_hidden_layers=1,output_layer_size=2,max_iterations=30000,activation_func='sigmoid',learning_rate=0.7)
     nn.fit(x=inputs_train,y=outputs_train)
 
 
@@ -122,6 +121,8 @@ if __name__ == '__main__':
         predicted_vls = nn.predict(inpt)
         predicted_num = np.argmax(predicted_vls)
         expected_num = np.argmax(outpt)
+        if predicted_num != expected_num:
+          print('error')
         print('%d predicted as %d ' % (expected_num,predicted_num))
         print(predicted_vls)
     

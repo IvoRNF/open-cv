@@ -5,12 +5,12 @@ import os
 class TraineerAnn:
 
    def __init__(self):
-      self.ann_fname = './anns/my_ann22.xml'
+      self.ann_fname = './anns/my_ann222.xml'
       self.training_data = []
       self.training_labels = []
-      self.hidden_nodes_size = 3
+      self.hidden_nodes_size = 2
       self.epochs=1
-      self.input_layer_size = 3
+      self.input_layer_size = 2
       self.output_layer_size = 2
       self.loaded = False
       if(os.path.exists(self.ann_fname)):
@@ -67,17 +67,13 @@ class TraineerAnn:
 if __name__ == '__main__':
     ann = TraineerAnn() 
     ann.epochs = 1000
-    ann.fit(x=[[0,0,255],[0,255,0],[0,0,255],[0,0,255]],y=[[1,0],[0,1],[1,0],[1,0]])
+    x = [[0,255],[255,0],[0,255],[0,255]]
+    y = [[1,0],[0,1],[1,0],[1,0]]
+    ann.fit(x=x,y=y)
     
 
-    test = [
-       [0,0,255],
-       [0,255,0], 
-       [0,200,0], 
-       [0,0,100],
-       [0,100,0]
-    ]
-    expected = [0,1,1,0,1]
+    test = x
+    expected = [np.argmax(z) for z in y]
     for sample,target in zip(test,expected): 
        label,propab = ann.predict(sample)
        if label != target:
@@ -86,7 +82,8 @@ if __name__ == '__main__':
          print(label)
          print(target)
          print('...')
-    print('ok')     
+    print('ok')    
+    ''' 
     for i in range(10): 
       try:
        w = ann.ann.getWeights(i)
@@ -94,4 +91,5 @@ if __name__ == '__main__':
       except:
          break
     print(ann.ann.getLayerSizes())  
+    '''
        
