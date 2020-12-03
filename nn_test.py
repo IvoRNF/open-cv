@@ -1,4 +1,5 @@
 import numpy as np 
+from ga import GeneticAlgorithm
 
 logging = False 
 
@@ -48,16 +49,44 @@ def multiply(msg,inpt,weights):
 
 def softmax(inpt):
     return np.exp(inpt)/np.sum( np.exp(inpt) )    
+def sigmoid(input_vl): 
+    return 1.0/(1.0+np.exp(-1 * input_vl))    
 
 def predict(inpt):
     y = multiply(msg='mutiplield by the input weights',inpt=sample,weights=weights[0]) 
-    y = softmax(y)
+    y = sigmoid(y)
     y = multiply(msg='mutiplield by the first hidden layer weights',inpt=y,weights=weights[1])
-    y = softmax(y)
+    y = sigmoid(y)
     y = multiply(msg='multiplield by then second hidden layer weights',inpt=y,weights=weights[2])
     return y 
-sample = x[0]
-y = predict(sample)
-print(y)    
+def weights_flattened():
+    global weights
+    result = []
+    for layer in weights: 
+        for vl in layer.flat: 
+           result.append(vl)
+    return np.array(result)
+def weights_unflattened(flattened):
+    global weights
+    result = [] 
+    start_idx = 0
+    for layer in weights: 
+       wts_of_layer = flattened[start_idx: start_idx + layer.shape[0]*layer.shape[1] ] 
+       start_idx += (len(wts_of_layer)) 
+       wts_of_layer = np.array(wts_of_layer)
+       wts_of_layer = np.reshape(wts_of_layer,newshape=layer.shape) 
+       result.append(wts_of_layer) 
+    return result    
+
+print(weights)
+print('...')
+flattened = weights_flattened()
+
+print('...')
+
+print(flattened)
+
+print('....')
 
 
+print(weights_unflattened(flattened))
