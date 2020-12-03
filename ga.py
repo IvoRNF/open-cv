@@ -36,17 +36,33 @@ class GeneticAlgorithm:
           offspring[i,0:middle_idx] = parents[parent1_idx,0:middle_idx]
           offspring[i,middle_idx:] = parents[parent2_idx,middle_idx:]
        return offspring
+    def mutation(self,offspring):
+        for i in np.arange(offspring.shape[0]): 
+            mut_idx = np.random.randint(low=0,high=offspring.shape[1])
+            offspring[i][mut_idx] += np.random.uniform(-1,1,1)[0] 
+    def update_fitness_vls(self):
+        for j in np.arange(self.solutions.shape[0]):  
+            sol = self.solutions[j]
+            self.fitness_vls[j] = self.fitness_value(sol)         
+    
+    def try_update_solutions(self,offspring):
+        for i in np.arange(offspring.shape[0]):
+            sol = offspring[i]
+            fitness_vl = self.fitness_value(sol)
+            for j in np.arange(self.fitness_vls.shape[0]):
+                if fitness_vl > self.fitness_vls[j]:
+                    self.solutions[j] = sol
+                    self.fitness_vls[j] = fitness_vl
+                    break
     def start(self):
         i = 0 
         while (i < self.generations): 
-           for j in np.arange(self.solutions.shape[0]): #get fitness values 
-               sol = self.solutions[j]
-               self.fitness_vls[j] = self.fitness_value(sol)  
+           self.update_fitness_vls() 
            self.sortByBestFitness()
-
-           #parents_for_mating = self.solutions[0:self.num_parents_for_mating] #best individuals
-           #offspring = self.crossover(parents_for_mating, parents_for_mating.shape)
-
+           parents_for_mating = self.solutions[0:self.num_parents_for_mating] #best individuals
+           offspring = self.crossover(parents_for_mating, parents_for_mating.shape)
+           ga.mutation(offspring)
+           self.try_update_solutions(offspring)
            i+=1 
 
 if __name__ == '__main__': 
@@ -55,11 +71,14 @@ if __name__ == '__main__':
     ga = GeneticAlgorithm(
         initial_solutions, 
         num_parents_for_mating=2,
-        generations=10,
+        generations=1000,
         fitness_func=func 
-    )        
+    )
+    print('initial_solutions')
+    print(initial_solutions)
+    print('....')        
     ga.start()
-    parents_for_mating = ga.solutions[0:ga.num_parents_for_mating] #best individuals
-    print(parents_for_mating)
-    offspring = ga.crossover(parents_for_mating, parents_for_mating.shape)
-    print(offspring)
+    print(ga.solutions)
+    print('...')
+    print(ga.fitness_vls)
+    print('____')
