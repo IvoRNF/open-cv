@@ -2,29 +2,35 @@ import numpy as np
 from ga import GeneticAlgorithm
 import pickle 
 import os 
-logging = False 
-
-def log(msg):
-    global logging
-    if not logging:
-        return 
-    print(msg) 
-
-x = np.array([[0,0,255],[0,255,0],[0,0,255],[0,0,255]],dtype=np.float64)
-target = np.array([0,1,0,0],dtype=np.float64)
-
+logging = True 
 weights = []
+biases = []
 hidden_layer_sizes = [2]
 output_layer_size = 2 
 model_f_name = './datasets/my_nn77.pk'
 
-last_input_sz =  x.shape[1]
-for neuron_count in [*hidden_layer_sizes,output_layer_size]: 
-    weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(last_input_sz,neuron_count))
-    weights.append(weights_of_layer) 
-    last_input_sz = neuron_count  
 
+def log(msg=None):
+    global logging
+    if not logging:
+        return 
+    if msg is None:
+      print()
+    else:       
+      print(msg) 
+def init_bias():
+    global biases
+    biases = np.random.uniform(low=-0.1,high=0.1,size=(len(weights)))      
 
+def init_weights():
+    global hidden_layer_sizes
+    global output_layer_size
+    global weights
+    last_input_sz =  3
+    for neuron_count in [*hidden_layer_sizes,output_layer_size]: 
+        weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(last_input_sz,neuron_count))
+        weights.append(weights_of_layer) 
+        last_input_sz = neuron_count  
 def softmax(inpt):
     return np.exp(inpt)/np.sum( np.exp(inpt) )    
 def sigmoid(input_vl): 
@@ -32,10 +38,12 @@ def sigmoid(input_vl):
 
 def predict(inpt):
     global weights
+    global biases 
     y = inpt
     for i in range(len(weights)):
         w = weights[i]
-        y = np.dot(y,w)
+        b = biases[i]
+        y = np.dot(y,w)  + b
         y = sigmoid(y)
     return y 
 def weights_flattened():
@@ -47,6 +55,8 @@ def weights_flattened():
     return np.array(result,dtype=np.float64)
 def weights_unflattened(flattened):
     global weights
+    if len(weights)==0:
+        init_weights()
     result = [] 
     start_idx = 0
     for layer in weights: 
@@ -64,7 +74,7 @@ def eval_model():
     for x,y in zip(x_test,y_test): 
         arr = predict(x)
         label = np.argmax(arr)
-        if(label == y): 
+        if(label == y):    
            prob = arr[label]
            if prob > 0:        
              acc += prob   
@@ -75,26 +85,33 @@ def fitness_func(sol):
     return eval_model()
 if __name__ == '__main__':
     if not os.path.exists(model_f_name):
-        print('training')
+        log('training')
+        logging = False
+        init_weights()
+        init_bias()
         flattened = weights_flattened()
-        initial_solutions = np.random.uniform(low=-4.0,high=4.0,size=(8,len(flattened)))
+        initial_solutions = np.random.uniform(low=-4.0,high=4.0,size=(20,len(flattened)))
         initial_solutions[0] = np.array(flattened,dtype=np.float64)
         ga = GeneticAlgorithm(
             solutions=initial_solutions, 
             num_parents_for_mating=2,
-            generations=500,
+            generations=5000,
             fitness_func=fitness_func 
         )
         ga.start()
-        wts = ga.solutions[0] #best solution 
+        logging = True
         with open(model_f_name,'wb') as f:
-           pickle.dump(wts,f)
-        print('saved model to file %s' % (model_f_name))
+           mapa = {"weights":ga.solutions[0],"bias":biases} 
+           pickle.dump(mapa,f)
+        log('saved model to file %s' % (model_f_name))
     else:    
         wts = None
         with open(model_f_name,'rb') as f:
-           wts = pickle.load(f)
-        print('loaded model from file')   
+           mapa = pickle.load(f)
+           wts = mapa['weights']
+           biases = mapa['bias']
+        log('loaded model from file')   
         weights = weights_unflattened(wts)   
+        print(predict([0,0,255]))
         acc = eval_model()
-        print('acc %.2f' % (acc))
+        log('acc %.2f' % (acc))
