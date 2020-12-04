@@ -67,18 +67,25 @@ def weights_unflattened(flattened):
        result.append(wts_of_layer) 
     return result    
 
-def eval_model():
+def eval_model(ret_stats=False):
     x_test = [[0,0,255],[0,100,0],[0,0,255],[0,0,255],[0,255,0],[0,255,0],[0,255,0]]
     y_test = [0,1,0,0,1,1,1]
     acc = 0
+    c_correct = []
+    probs = []
     for x,y in zip(x_test,y_test): 
         arr = predict(x)
         label = np.argmax(arr)
         if(label == y):    
+           c_correct.append(1)
+           probs.append(arr)
            prob = arr[label]
            if prob > 0:        
              acc += prob   
-    return (acc / len(y_test))
+    acc = (acc / len(y_test))
+    if ret_stats:
+        return {'acc_float': acc, 'acc_int':len(c_correct)/len(y_test),'probs':probs}         
+    return acc
 def fitness_func(sol):
     global weights
     weights = weights_unflattened(sol)
@@ -113,5 +120,5 @@ if __name__ == '__main__':
         log('loaded model from file')   
         weights = weights_unflattened(wts)   
         print(predict([0,0,255]))
-        acc = eval_model()
-        log('acc %.2f' % (acc))
+        stats = eval_model(ret_stats=True)
+        log(stats)
