@@ -8,7 +8,7 @@ biases = []
 hidden_layer_sizes = [2]
 output_layer_size = 2 
 model_f_name = './datasets/my_nn77.pk'
-
+inpt_layer_size = 3
 
 def log(msg=None):
     global logging
@@ -26,7 +26,8 @@ def init_weights():
     global hidden_layer_sizes
     global output_layer_size
     global weights
-    last_input_sz =  3
+    global inpt_layer_size
+    last_input_sz =  inpt_layer_size
     for neuron_count in [*hidden_layer_sizes,output_layer_size]: 
         weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(last_input_sz,neuron_count))
         weights.append(weights_of_layer) 
