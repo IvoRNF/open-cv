@@ -84,7 +84,7 @@ def eval_model(ret_stats=False):
              acc += prob   
     acc = (acc / len(y_test))
     if ret_stats:
-        return {'acc_float': acc, 'acc_int':len(c_correct)/len(y_test),'probs':probs}         
+        return {'acc_float': acc, 'acc_int':len(c_correct)/len(y_test),'probs':[ (y_test[x],probs[x]) for x in np.arange(len(y_test)) ]}         
     return acc
 def fitness_func(sol):
     global weights
