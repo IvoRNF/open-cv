@@ -98,12 +98,12 @@ if __name__ == '__main__':
         init_weights()
         init_bias()
         flattened = weights_flattened()
-        initial_solutions = np.random.uniform(low=-4.0,high=4.0,size=(20,len(flattened)))
+        initial_solutions = np.random.uniform(low=-2.0,high=4.0,size=(10,len(flattened)))
         initial_solutions[0] = np.array(flattened,dtype=np.float64)
         ga = GeneticAlgorithm(
             solutions=initial_solutions, 
             num_parents_for_mating=2,
-            generations=5000,
+            generations=100,
             fitness_func=fitness_func 
         )
         ga.start()
