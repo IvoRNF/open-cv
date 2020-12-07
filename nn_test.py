@@ -98,6 +98,17 @@ class MyNeuralNetwork:
     def fitness_func(self,sol):   
         self.weights = self.weights_unflattened(sol)
         return self.eval_model()
+    def load(self):
+        with open(self.model_f_name,'rb') as f:
+           mapa = pickle.load(f)
+           self.weights = self.weights_unflattened(mapa['weights'])
+           self.biases = mapa['bias']
+        print('loaded model from file')  
+    def save(self):
+        with open(self.model_f_name,'wb') as f:
+           mapa = {"weights":self.weights,"bias":self.biases} 
+           pickle.dump(mapa,f)
+        print('saved model to file %s' % (self.model_f_name))        
 if __name__ == '__main__':
     model_f_name = './datasets/my_nn77.pk'
     inpt_sz = 3
@@ -118,19 +129,11 @@ if __name__ == '__main__':
             fitness_func=nn.fitness_func 
         )
         ga.start()
-        with open(model_f_name,'wb') as f:
-           mapa = {"weights":ga.solutions[0],"bias":nn.biases} 
-           pickle.dump(mapa,f)
-        print('saved model to file %s' % (model_f_name))
+        nn.weights = ga.solutions[0]
+        nn.save()
     else:    
-        wts = None
         nn= MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
-        with open(model_f_name,'rb') as f:
-           mapa = pickle.load(f)
-           wts = mapa['weights']
-           nn.biases = mapa['bias']
-        print('loaded model from file')   
-        nn.weights = nn.weights_unflattened(wts)   
+        nn.load()   
         print(nn.predict([0,0,255]))
         stats = nn.eval_model(ret_stats=True)
         print(stats)
