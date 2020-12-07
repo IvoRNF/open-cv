@@ -7,7 +7,7 @@ class GeneticAlgorithm:
         return self.fitness_func(solution)
 
 
-    def __init__(self,solutions : np.ndarray ,num_parents_for_mating=2,generations=10000,fitness_func=None):
+    def __init__(self,solutions : np.ndarray ,num_parents_for_mating=2,generations=10000,offspring_sz=2,fitness_func=None):
         self.solutions_per_population = solutions.shape[0] 
         self.genes_per_solution = solutions.shape[1]
         self.generations = generations 
@@ -15,6 +15,7 @@ class GeneticAlgorithm:
         self.fitness_vls = np.zeros(shape=self.solutions_per_population)
         self.solutions = solutions 
         self.fitness_func = fitness_func
+        self.offspring_sz = offspring_sz
     
     def sortByBestFitness(self): 
         for i  in np.arange(self.fitness_vls.shape[0]):
@@ -60,7 +61,7 @@ class GeneticAlgorithm:
            self.update_fitness_vls() 
            self.sortByBestFitness()
            parents_for_mating = self.solutions[0:self.num_parents_for_mating] #best individuals
-           offspring = self.crossover(parents_for_mating, parents_for_mating.shape)
+           offspring = self.crossover(parents_for_mating, (self.offspring_sz,parents_for_mating.shape[1]))
            self.mutation(offspring)
            self.try_update_solutions(offspring)
            i+=1 

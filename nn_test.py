@@ -82,6 +82,7 @@ class MyNeuralNetwork:
                 c_correct.append(1)
                 prob = arr[label]
                 if prob > 0:                    
+                    '''
                     has_distance = True
                     for k in range(len(arr)):
                         it = arr[k]
@@ -89,8 +90,9 @@ class MyNeuralNetwork:
                           if (arr[label]  - it)< min_distance:
                               has_distance = False 
                               break
-                    if has_distance:          
-                      acc += prob   
+                    if has_distance: 
+                    '''             
+                    acc += prob   
         acc = (acc / len(y_test))
         if ret_stats:
             return {'acc_float': acc, 'acc_int':len(c_correct)/len(y_test),'probs':[ (y_test[x],probs[x]) for x in np.arange(len(y_test)) ]}         
@@ -124,9 +126,10 @@ if __name__ == '__main__':
         initial_solutions[0] = np.array(flattened,dtype=np.float64)
         ga = GeneticAlgorithm(
             solutions=initial_solutions, 
-            num_parents_for_mating=2,
-            generations=250,
-            fitness_func=nn.fitness_func 
+            num_parents_for_mating=4,
+            generations=70,
+            fitness_func=nn.fitness_func ,
+            offspring_sz=4
         )
         ga.start()
         nn.weights = ga.solutions[0]
