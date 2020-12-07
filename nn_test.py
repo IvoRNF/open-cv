@@ -67,14 +67,15 @@ class MyNeuralNetwork:
             wts_of_layer = np.reshape(wts_of_layer,newshape=layer.shape) 
             result.append(wts_of_layer) 
         return result    
+    def fit(self,x,y):
+       self.x_train = x 
+       self.y_train = y    
 
     def eval_model(self,ret_stats=False,min_distance=0.3):
-        x_test = [[0,0,255],[0,100,0],[0,0,255],[0,0,255],[0,255,0],[0,255,0],[0,255,0]]
-        y_test = [0,1,0,0,1,1,1]
         acc = 0
         c_correct = []
         probs = []
-        for x,y in zip(x_test,y_test): 
+        for x,y in zip(self.x_train,self.y_train): 
             arr = self.predict(x)
             label = np.argmax(arr)
             probs.append(arr)
@@ -93,9 +94,9 @@ class MyNeuralNetwork:
                     if has_distance: 
                     '''             
                     acc += prob   
-        acc = (acc / len(y_test))
+        acc = (acc / len(self.y_train))
         if ret_stats:
-            return {'acc_float': acc, 'acc_int':len(c_correct)/len(y_test),'probs':[ (y_test[x],probs[x]) for x in np.arange(len(y_test)) ]}         
+            return {'acc_float': acc, 'acc_int':len(c_correct)/len(self.y_train),'probs':[ (self.y_train[x],probs[x]) for x in np.arange(len(self.y_train)) ]}         
         return acc
     def fitness_func(self,sol):   
         self.weights = self.weights_unflattened(sol)
@@ -116,18 +117,22 @@ if __name__ == '__main__':
     inpt_sz = 3
     hidden_szs = [2]
     outpt_sz = 2
+    x_train = [[0,0,255],[0,100,0],[0,0,255],[0,0,255],[0,255,0],[0,255,0],[0,255,0]]
+    y_train = [0,1,0,0,1,1,1]
+        
     if not os.path.exists(model_f_name):
         print('training')
         nn = MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
+        nn.fit(x_train,y_train)
         nn.init_weights()
         nn.init_bias()
         flattened = nn.weights_flattened()
-        initial_solutions = np.random.uniform(low=-1.0,high=1.0,size=(10,len(flattened)))
+        initial_solutions = np.random.uniform(low=-1.0,high=1.0,size=(20,len(flattened)))
         initial_solutions[0] = np.array(flattened,dtype=np.float64)
         ga = GeneticAlgorithm(
             solutions=initial_solutions, 
             num_parents_for_mating=4,
-            generations=70,
+            generations=90,
             fitness_func=nn.fitness_func ,
             offspring_sz=4
         )
@@ -136,6 +141,7 @@ if __name__ == '__main__':
         nn.save()
     else:    
         nn= MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
+        nn.fit(x_train,y_train)
         nn.load()   
         print(nn.predict([0,0,255]))
         stats = nn.eval_model(ret_stats=True)
