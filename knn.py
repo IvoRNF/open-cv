@@ -328,11 +328,9 @@ def chart_data():
     seed = 11
     np.random.seed(seed)
     tsne = TSNE(n_components=2,random_state=seed)
-    all_data = []
-    all_targets = []
     fig = plt.figure()
     ax = fig.add_subplot(111)
-    colors = ['b','g','r']
+    colors = ['b','g','r'] #3 classes
     for row in loader.files:
         imgs_fnames = row['imgs_per_class']
         features = []
@@ -345,13 +343,7 @@ def chart_data():
         dir_name = os.path.dirname(imgs_fnames[0])
         folder_name = os.path.basename(dir_name)    
         features = tsne.fit_transform(np.array(features))    
-        row['features'] = features
-        all_data.extend(features)
-        targets = [ row['index'] for x in range(len(features)) ]
-        all_targets.extend(targets)
         ax.scatter(np.array(features)[:,0],np.array(features)[:,1],c=colors[row['index']],label=folder_name)
-    all_data = np.array(all_data)
-    all_targets = np.array(all_targets)
     plt.title('captures dataset')
     ax.legend(loc='best')
     plt.show()
