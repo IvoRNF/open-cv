@@ -325,9 +325,9 @@ def chart_data():
     loader = FileLoader(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
     loader.load_files()
     hog = cv2.HOGDescriptor()
-    seed = 11
-    np.random.seed(seed)
-    tsne = TSNE(n_components=2,random_state=seed)
+    #seed = 11
+    #np.random.seed(seed)
+    tsne = TSNE(n_components=2)
     fig = plt.figure()
     ax = fig.add_subplot(111)
     colors = ['b','g','r'] #3 classes
