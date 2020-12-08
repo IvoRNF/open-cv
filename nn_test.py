@@ -4,7 +4,6 @@ import pickle
 import os
 
 
-
 class MyNeuralNetwork:
 
     def __init__(self,inpt_layer_size,hidden_layer_sizes,output_layer_size,model_f_name,logging=True):
@@ -71,7 +70,7 @@ class MyNeuralNetwork:
        self.x_train = x 
        self.y_train = y    
 
-    def eval_model(self,ret_stats=False,min_distance=0.3):
+    def eval_model(self,ret_stats=False):
         acc = 0
         c_correct = []
         probs = []
@@ -82,17 +81,7 @@ class MyNeuralNetwork:
             if(label == y):    
                 c_correct.append(1)
                 prob = arr[label]
-                if prob > 0:                    
-                    '''
-                    has_distance = True
-                    for k in range(len(arr)):
-                        it = arr[k]
-                        if (it > 0) and (k != label):
-                          if (arr[label]  - it)< min_distance:
-                              has_distance = False 
-                              break
-                    if has_distance: 
-                    '''             
+                if prob > 0: 
                     acc += prob   
         acc = (acc / len(self.y_train))
         if ret_stats:
@@ -112,7 +101,10 @@ class MyNeuralNetwork:
            mapa = {"weights":self.weights,"bias":self.biases} 
            pickle.dump(mapa,f)
         print('saved model to file %s' % (self.model_f_name))        
+
+
 if __name__ == '__main__':
+
     model_f_name = './datasets/my_nn77.pk'
     inpt_sz = 3
     hidden_szs = [2]
@@ -146,3 +138,4 @@ if __name__ == '__main__':
         print(nn.predict([0,0,255]))
         stats = nn.eval_model(ret_stats=True)
         print(stats)
+     

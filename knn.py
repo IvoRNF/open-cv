@@ -8,6 +8,7 @@ from skimage.feature import hog
 from skimage import exposure
 from file_loader import FileLoader
 import dlib 
+from sklearn.manifold import TSNE
 
 class Knn(FileLoader):
     
@@ -48,8 +49,8 @@ class Knn(FileLoader):
          print('trained')
         
     def createHog(self):
-         #necessario aspect raio 1:2
-        hog = cv2.HOGDescriptor()#(100,200),(8,8),(4,4),(8,8),9,1,-1,0,0.2,1,64,True)
+        #necessario aspect ratio 1:2
+        hog = cv2.HOGDescriptor()
         return hog            
     def train(self,data , labels):
         self.knn.train(data,cv2.ml.ROW_SAMPLE,labels)
@@ -319,9 +320,44 @@ def detect(img,knn,pyrLevels=3,min_distance=170,win_sz=(300,400)):
         if (distance < min_founded) and (distance<=min_distance):
              min_founded = distance
              founded = (distance,resized.shape,(x,y,w,h))  
-  return founded        
+  return founded    
+def chart_data(): 
+    loader = FileLoader(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
+    loader.load_files()
+    hog = cv2.HOGDescriptor()
+    seed = 11
+    np.random.seed(seed)
+    tsne = TSNE(n_components=2,random_state=seed)
+    all_data = []
+    all_targets = []
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    colors = ['b','g','r']
+    for row in loader.files:
+        imgs_fnames = row['imgs_per_class']
+        features = []
+        for f_name in imgs_fnames:
+            img = cv2.imread(f_name,cv2.IMREAD_GRAYSCALE)
+            img = cv2.resize(img,(64,128),interpolation=cv2.INTER_AREA)
+            descr = hog.compute(img)
+            descr = np.squeeze(descr)
+            features.append(descr)
+        dir_name = os.path.dirname(imgs_fnames[0])
+        folder_name = os.path.basename(dir_name)    
+        features = tsne.fit_transform(np.array(features))    
+        row['features'] = features
+        all_data.extend(features)
+        targets = [ row['index'] for x in range(len(features)) ]
+        all_targets.extend(targets)
+        ax.scatter(np.array(features)[:,0],np.array(features)[:,1],c=colors[row['index']],label=folder_name)
+    all_data = np.array(all_data)
+    all_targets = np.array(all_targets)
+    plt.title('captures dataset')
+    ax.legend(loc='best')
+    plt.show()
+
 def main():
-    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste pyr')
+    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste pyr\n6 chart')
     v = input()
     if v =='1':  
       evaluate_knn()
@@ -349,7 +385,9 @@ def main():
         k = cv2.waitKey(10)
         if k == ord('q'):
           break
-      cv2.destroyAllWindows()  
+      cv2.destroyAllWindows()
+    elif v=='6':
+        chart_data()  
       
       
         
