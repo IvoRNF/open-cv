@@ -8,7 +8,7 @@ from skimage.feature import hog
 from skimage import exposure
 from file_loader import FileLoader
 import dlib 
-from sklearn.manifold import TSNE
+from sklearn.decomposition import PCA
 
 class Knn(FileLoader):
     
@@ -325,9 +325,8 @@ def chart_data():
     loader = FileLoader(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
     loader.load_files()
     hog = cv2.HOGDescriptor()
-    #seed = 11
-    #np.random.seed(seed)
-    tsne = TSNE(n_components=2)
+    seed = 11
+    pca = PCA(n_components=2,random_state=seed)
     fig = plt.figure()
     ax = fig.add_subplot(111)
     colors = ['b','g','r'] #3 classes
@@ -342,7 +341,7 @@ def chart_data():
             features.append(descr)
         dir_name = os.path.dirname(imgs_fnames[0])
         folder_name = os.path.basename(dir_name)    
-        features = tsne.fit_transform(np.array(features))    
+        features = pca.fit_transform(np.array(features))    
         ax.scatter(np.array(features)[:,0],np.array(features)[:,1],c=colors[row['index']],label=folder_name)
     plt.title('captures dataset')
     ax.legend(loc='best')
