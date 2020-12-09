@@ -38,7 +38,7 @@ class Knn(FileLoader):
              dirs = row['imgs_per_class']
              idx = row['index']
              for file_name in dirs:
-                descriptor = self.getHogDescriptor( cv2.imread(file_name,cv2.IMREAD_GRAYSCALE))
+                descriptor = self.getDescriptor( cv2.imread(file_name,cv2.IMREAD_GRAYSCALE))
                 descriptors.append(descriptor)
                 responses.append(idx)
          print('training')
@@ -58,7 +58,7 @@ class Knn(FileLoader):
         self.knn.save(self.knn_fname)
         print('saving knn to file')  
     
-    def getHogDescriptor(self,sample,hog_open_cv=True):
+    def getDescriptor(self,sample,hog_open_cv=True):
       sampleToPredict = sample
       if len(sampleToPredict.shape)>2:
         sampleToPredict = remove_ilumination(sampleToPredict)
@@ -67,14 +67,18 @@ class Knn(FileLoader):
           reversedShape = self.shape[::-1]
           sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)  
       if(hog_open_cv):
-        descr = self.hog.compute(sampleToPredict) #opencv hog
-        descr = np.squeeze(descr)
+        descr = local_binary_pattern(image=sampleToPredict,P=8 * 6,R=6,method='default')
+        descr = descr.ravel()
+        hist,_ = np.histogram(descr,bins=np.arange(255),normed=True)
+        descr = hist
+        #descr = self.hog.compute(sampleToPredict) #opencv hog
+        #descr = np.squeeze(descr)
       else:
         descr =hog(sampleToPredict,orientations=8,pixels_per_cell=(4,4),
                             cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog      
       return descr
-    def processAndPredict(self,sample , k = 6):
-        descriptor = self.getHogDescriptor(sample)  
+    def processAndPredict(self,sample , k = 3):
+        descriptor = self.getDescriptor(sample)  
         return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
     def pyrDown(self,img,levels=1):
         for i in range(levels):
@@ -188,7 +192,7 @@ def show_std():
   for row in knn.files:
      imgs = row['imgs_per_class']
      for fname in imgs: 
-       descriptors.append(  knn.getHogDescriptor( cv2.imread(fname , cv2.IMREAD_GRAYSCALE) )  )
+       descriptors.append(  knn.getDescriptor( cv2.imread(fname , cv2.IMREAD_GRAYSCALE) )  )
   descriptors = np.array(descriptors)
   stds = np.std(descriptors,axis=0)
   stds = stds * 100
