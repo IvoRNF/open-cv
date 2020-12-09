@@ -5,6 +5,7 @@ import time
 import math
 import matplotlib.pyplot as plt 
 from skimage.feature import hog
+from skimage.feature import local_binary_pattern
 from skimage import exposure
 from file_loader import FileLoader
 import dlib 
@@ -324,7 +325,6 @@ def detect(img,knn,pyrLevels=3,min_distance=170,win_sz=(300,400)):
 def chart_data(): 
     loader = FileLoader(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
     loader.load_files()
-    hog = cv2.HOGDescriptor()
     seed = 11
     pca = PCA(n_components=2,random_state=seed)
     fig = plt.figure()
@@ -341,8 +341,10 @@ def chart_data():
         for f_name in imgs_fnames:
             img = cv2.imread(f_name,cv2.IMREAD_GRAYSCALE)
             img = cv2.resize(img,(64,128),interpolation=cv2.INTER_AREA)
-            descr = hog.compute(img)
-            descr = np.squeeze(descr)
+            descr = local_binary_pattern(image=img,P=8,R=3,method='default')
+            descr = descr.ravel()
+            hist,_ = np.histogram(descr,bins=np.arange(255))
+            descr = hist
             features.append(descr)
             labels.append(row['index'])
             class_names.append(row['class_name'])
@@ -352,14 +354,7 @@ def chart_data():
         all_class_names.extend(class_names)
     all_features = np.array(all_features)
     all_labels = np.array(all_labels)
-
-    stds = np.std(all_features,axis=0)
-    #stds = np.sort(stds)
-    #print(stds[0:50])
-    all_features2 = all_features #[:,stds<0.15]
-    print(all_features2.shape)
-    print(all_labels.shape)
-
+    all_features2 = all_features
     for label,label_name in zip(np.unique(all_labels),np.unique(all_class_names)):
       features = all_features2[ all_labels==label ,:]
       transformed = pca.fit_transform(features)
@@ -367,6 +362,8 @@ def chart_data():
     plt.title('captures dataset')
     ax.legend(loc='best')
     plt.show()
+    
+    
 def main():
     print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste pyr\n6 chart')
     v = input()
