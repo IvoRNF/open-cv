@@ -341,7 +341,7 @@ def chart_data():
         for f_name in imgs_fnames:
             img = cv2.imread(f_name,cv2.IMREAD_GRAYSCALE)
             img = cv2.resize(img,(64,128),interpolation=cv2.INTER_AREA)
-            descr = local_binary_pattern(image=img,P=8,R=3,method='default')
+            descr = local_binary_pattern(image=img,P=8 * 3,R=3,method='default')
             descr = descr.ravel()
             hist,_ = np.histogram(descr,bins=np.arange(255))
             descr = hist
