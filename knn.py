@@ -330,23 +330,43 @@ def chart_data():
     fig = plt.figure()
     ax = fig.add_subplot(111)
     colors = ['b','g','r'] #3 classes
+    all_features = []
+    all_labels = []
+    all_class_names = []
     for row in loader.files:
         imgs_fnames = row['imgs_per_class']
         features = []
+        labels = []
+        class_names = []
         for f_name in imgs_fnames:
             img = cv2.imread(f_name,cv2.IMREAD_GRAYSCALE)
             img = cv2.resize(img,(64,128),interpolation=cv2.INTER_AREA)
             descr = hog.compute(img)
             descr = np.squeeze(descr)
             features.append(descr)
-        dir_name = os.path.dirname(imgs_fnames[0])
-        folder_name = os.path.basename(dir_name)    
-        features = pca.fit_transform(np.array(features))    
-        ax.scatter(np.array(features)[:,0],np.array(features)[:,1],c=colors[row['index']],label=folder_name)
+            labels.append(row['index'])
+            class_names.append(row['class_name'])
+        row['features'] = np.array(features)       
+        all_features.extend(features)
+        all_labels.extend(labels)
+        all_class_names.extend(class_names)
+    all_features = np.array(all_features)
+    all_labels = np.array(all_labels)
+
+    stds = np.std(all_features,axis=0)
+    #stds = np.sort(stds)
+    #print(stds[0:50])
+    all_features2 = all_features #[:,stds<0.15]
+    print(all_features2.shape)
+    print(all_labels.shape)
+
+    for label,label_name in zip(np.unique(all_labels),np.unique(all_class_names)):
+      features = all_features2[ all_labels==label ,:]
+      transformed = pca.fit_transform(features)
+      ax.scatter(transformed[:,0],transformed[:,1],c=colors[label],label=label_name)
     plt.title('captures dataset')
     ax.legend(loc='best')
     plt.show()
-
 def main():
     print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste pyr\n6 chart')
     v = input()
