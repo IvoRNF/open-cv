@@ -68,15 +68,18 @@ class Knn(FileLoader):
           sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)  
       if(descr_open_cv):
         #ORB
-        descr_sz = 32
+        descr_sz = 64
         descr = np.zeros(descr_sz) # tamanho max baseado em experimento
         orb = cv2.ORB_create(nfeatures=descr_sz)
         kp = orb.detect(sampleToPredict,None)
         kp,orb_desc = orb.compute(sampleToPredict,kp)
         if orb_desc is not None: 
           orb_desc = orb_desc.ravel()
-          for i in range(descr_sz):
-            descr[i] = orb_desc[i]       
+          for i in range(orb_desc.shape[0]):
+            if i < descr_sz:
+              descr[i] = orb_desc[i]  
+            else:
+              break       
         #HOG
         #descr = self.hog.compute(sampleToPredict) #opencv hog
         #descr = np.squeeze(descr)
@@ -91,7 +94,7 @@ class Knn(FileLoader):
         #hist,_ = np.histogram(descr,bins=np.arange(255),normed=True)
         #descr = hist                         
       return descr
-    def processAndPredict(self,sample , k = 6):
+    def processAndPredict(self,sample , k = 3):
         descriptor = self.getDescriptor(sample)  
         return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
     def pyrDown(self,img,levels=1):
@@ -351,7 +354,8 @@ def chart_data():
     all_features = []
     all_labels = []
     all_class_names = []
-    orb = cv2.ORB_create(nfeatures=32)
+    max_elems = 64
+    orb = cv2.ORB_create(nfeatures=max_elems)
     for row in loader.files:
         imgs_fnames = row['imgs_per_class']
         features = []
@@ -381,14 +385,15 @@ def chart_data():
     all_features = np.array(all_features)
     all_labels = np.array(all_labels)
     
-    max_elems = 32
-    
     arr = np.zeros(shape=(all_features.shape[0],max_elems))
     
     for i in range(all_features.shape[0]):
       feature = all_features[i]
-      for j in range(max_elems):
-          arr[i][j] = feature[j]   
+      for j in range(feature.shape[0]):
+          if j < max_elems:
+            arr[i][j] = feature[j]
+          else:
+            break     
     all_features = arr
     print(all_features.shape)
     print(all_labels.shape)
