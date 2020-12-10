@@ -10,7 +10,7 @@ from skimage import exposure
 from file_loader import FileLoader
 import dlib 
 from sklearn.decomposition import PCA
-
+from mpl_toolkits.mplot3d import Axes3D
 class Knn(FileLoader):
     
     def __init__(self):
@@ -68,13 +68,14 @@ class Knn(FileLoader):
           sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)  
       if(descr_open_cv):
         #ORB
-        descr = np.zeros(288) # tamanho max baseado em experimento
+        descr_sz = 32
+        descr = np.zeros(descr_sz) # tamanho max baseado em experimento
         orb = cv2.ORB_create()
         kp = orb.detect(sampleToPredict,None)
         kp,orb_desc = orb.compute(sampleToPredict,kp)
         if orb_desc is not None: 
           orb_desc = orb_desc.ravel()
-          for i in range(orb_desc.shape[0]):
+          for i in range(descr_sz):
             descr[i] = orb_desc[i]       
         #HOG
         #descr = self.hog.compute(sampleToPredict) #opencv hog
@@ -90,7 +91,7 @@ class Knn(FileLoader):
         #hist,_ = np.histogram(descr,bins=np.arange(255),normed=True)
         #descr = hist                         
       return descr
-    def processAndPredict(self,sample , k = 3):
+    def processAndPredict(self,sample , k = 6):
         descriptor = self.getDescriptor(sample)  
         return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
     def pyrDown(self,img,levels=1):
@@ -343,9 +344,9 @@ def chart_data():
     loader = FileLoader(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
     loader.load_files()
     seed = 11
-    pca = PCA(n_components=2,random_state=seed)
+    pca = PCA(n_components=3,random_state=seed)
     fig = plt.figure()
-    ax = fig.add_subplot(111)
+    ax = fig.add_subplot(111,projection='3d')
     colors = ['b','g','r'] #3 classes
     all_features = []
     all_labels = []
@@ -380,16 +381,13 @@ def chart_data():
     all_features = np.array(all_features)
     all_labels = np.array(all_labels)
     
-    max_elems = 0
+    max_elems = 32
     
-    for feature in all_features:
-        if feature.shape[0] > max_elems:
-            max_elems =  feature.shape[0]
     arr = np.zeros(shape=(all_features.shape[0],max_elems))
     
     for i in range(all_features.shape[0]):
       feature = all_features[i]
-      for j in range(feature.shape[0]):
+      for j in range(max_elems):
           arr[i][j] = feature[j]   
     all_features = arr
     print(all_features.shape)
@@ -398,12 +396,10 @@ def chart_data():
     for label,label_name in zip(np.unique(all_labels),np.unique(all_class_names)):
       features = all_features[ all_labels==label ,:]
       transformed = pca.fit_transform(features)
-      ax.scatter(transformed[:,0],transformed[:,1],c=colors[label],label=label_name)
+      ax.scatter(xs=transformed[:,0],ys=transformed[:,1],zs=transformed[:,2],c=colors[label],label=label_name)
     plt.title('captures dataset')
     ax.legend(loc='best')
     plt.show()
-    
-    
     
 def main():
     print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste pyr\n6 chart')
