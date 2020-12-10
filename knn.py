@@ -70,7 +70,7 @@ class Knn(FileLoader):
         #ORB
         descr_sz = 32
         descr = np.zeros(descr_sz) # tamanho max baseado em experimento
-        orb = cv2.ORB_create()
+        orb = cv2.ORB_create(nfeatures=descr_sz)
         kp = orb.detect(sampleToPredict,None)
         kp,orb_desc = orb.compute(sampleToPredict,kp)
         if orb_desc is not None: 
@@ -351,7 +351,7 @@ def chart_data():
     all_features = []
     all_labels = []
     all_class_names = []
-    orb = cv2.ORB_create()
+    orb = cv2.ORB_create(nfeatures=32)
     for row in loader.files:
         imgs_fnames = row['imgs_per_class']
         features = []
