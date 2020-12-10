@@ -58,7 +58,7 @@ class Knn(FileLoader):
         self.knn.save(self.knn_fname)
         print('saving knn to file')  
     
-    def getDescriptor(self,sample,hog_open_cv=True):
+    def getDescriptor(self,sample,descr_open_cv=True):
       sampleToPredict = sample
       if len(sampleToPredict.shape)>2:
         sampleToPredict = remove_ilumination(sampleToPredict)
@@ -66,16 +66,29 @@ class Knn(FileLoader):
       if sampleToPredict.shape != self.shape:
           reversedShape = self.shape[::-1]
           sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)  
-      if(hog_open_cv):
-        descr = local_binary_pattern(image=sampleToPredict,P=8 * 6,R=6,method='default')
-        descr = descr.ravel()
-        hist,_ = np.histogram(descr,bins=np.arange(255),normed=True)
-        descr = hist
+      if(descr_open_cv):
+        #ORB
+        descr = np.zeros(288) # tamanho max baseado em experimento
+        orb = cv2.ORB_create()
+        kp = orb.detect(sampleToPredict,None)
+        kp,orb_desc = orb.compute(sampleToPredict,kp)
+        if orb_desc is not None: 
+          orb_desc = orb_desc.ravel()
+          for i in range(orb_desc.shape[0]):
+            descr[i] = orb_desc[i]       
+        #HOG
         #descr = self.hog.compute(sampleToPredict) #opencv hog
         #descr = np.squeeze(descr)
       else:
+        # HOG skimage
         descr =hog(sampleToPredict,orientations=8,pixels_per_cell=(4,4),
-                            cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog      
+                            cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog 
+        #LBPH
+    
+        #descr = local_binary_pattern(image=sampleToPredict,P=8 * 6,R=6,method='default')
+        #descr = descr.ravel()
+        #hist,_ = np.histogram(descr,bins=np.arange(255),normed=True)
+        #descr = hist                         
       return descr
     def processAndPredict(self,sample , k = 3):
         descriptor = self.getDescriptor(sample)  
