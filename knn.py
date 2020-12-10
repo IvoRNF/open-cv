@@ -337,6 +337,7 @@ def chart_data():
     all_features = []
     all_labels = []
     all_class_names = []
+    orb = cv2.ORB_create()
     for row in loader.files:
         imgs_fnames = row['imgs_per_class']
         features = []
@@ -345,11 +346,18 @@ def chart_data():
         for f_name in imgs_fnames:
             img = cv2.imread(f_name,cv2.IMREAD_GRAYSCALE)
             img = cv2.resize(img,(64,128),interpolation=cv2.INTER_AREA)
-            descr = local_binary_pattern(image=img,P=8 * 3,R=3,method='default')
-            descr = descr.ravel()
-            hist,_ = np.histogram(descr,bins=np.arange(255))
-            descr = hist
-            features.append(descr)
+            #descr = local_binary_pattern(image=img,P=8 * 3,R=3,method='default')
+            #descr = descr.ravel()
+            #hist,_ = np.histogram(descr,bins=np.arange(255))
+            #descr = hist
+            kp = orb.detect(img,None)
+            kp,descr = orb.compute(img,kp) 
+            #print(descr.shape)
+            #exit(1)
+            if descr is None:
+              continue
+            print(descr.shape)
+            features.append(descr.ravel())
             labels.append(row['index'])
             class_names.append(row['class_name'])
         row['features'] = np.array(features)       
@@ -358,14 +366,30 @@ def chart_data():
         all_class_names.extend(class_names)
     all_features = np.array(all_features)
     all_labels = np.array(all_labels)
-    all_features2 = all_features
+    
+    max_elems = 0
+    
+    for feature in all_features:
+        if feature.shape[0] > max_elems:
+            max_elems =  feature.shape[0]
+    arr = np.zeros(shape=(all_features.shape[0],max_elems))
+    
+    for i in range(all_features.shape[0]):
+      feature = all_features[i]
+      for j in range(feature.shape[0]):
+          arr[i][j] = feature[j]   
+    all_features = arr
+    print(all_features.shape)
+    print(all_labels.shape)
+    
     for label,label_name in zip(np.unique(all_labels),np.unique(all_class_names)):
-      features = all_features2[ all_labels==label ,:]
+      features = all_features[ all_labels==label ,:]
       transformed = pca.fit_transform(features)
       ax.scatter(transformed[:,0],transformed[:,1],c=colors[label],label=label_name)
     plt.title('captures dataset')
     ax.legend(loc='best')
     plt.show()
+    
     
     
 def main():
