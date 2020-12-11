@@ -58,7 +58,7 @@ class Knn(FileLoader):
         self.knn.save(self.knn_fname)
         print('saving knn to file')  
     
-    def getDescriptor(self,sample,descr_open_cv=True):
+    def getDescriptor(self,sample,descr_open_cv=False):
       sampleToPredict = sample
       if len(sampleToPredict.shape)>2:
         sampleToPredict = remove_ilumination(sampleToPredict)
@@ -68,6 +68,7 @@ class Knn(FileLoader):
           sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)  
       if(descr_open_cv):
         #ORB
+        
         descr_sz = 64
         descr = np.zeros(descr_sz) # tamanho max baseado em experimento
         orb = cv2.ORB_create(nfeatures=descr_sz)
@@ -79,22 +80,23 @@ class Knn(FileLoader):
             if i < descr_sz:
               descr[i] = orb_desc[i]  
             else:
-              break       
+              break  
+                  
         #HOG
         #descr = self.hog.compute(sampleToPredict) #opencv hog
         #descr = np.squeeze(descr)
       else:
         # HOG skimage
-        descr =hog(sampleToPredict,orientations=8,pixels_per_cell=(4,4),
-                            cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog 
+        #descr =hog(sampleToPredict,orientations=8,pixels_per_cell=(4,4),
+        #                    cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog 
         #LBPH
     
-        #descr = local_binary_pattern(image=sampleToPredict,P=8 * 6,R=6,method='default')
-        #descr = descr.ravel()
-        #hist,_ = np.histogram(descr,bins=np.arange(255),normed=True)
-        #descr = hist                         
+        descr = local_binary_pattern(image=sampleToPredict,P=8,R=1,method='default')
+        descr = descr.ravel()
+        hist,_ = np.histogram(descr,bins=np.arange(255))
+        descr = hist                         
       return descr
-    def processAndPredict(self,sample , k = 3):
+    def processAndPredict(self,sample , k = 6):
         descriptor = self.getDescriptor(sample)  
         return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
     def pyrDown(self,img,levels=1):
@@ -112,7 +114,7 @@ def middleRects(shape,start=2,end=8,step=1,center_x=0,center_y=0):
       yield (x,y,rect_width,rect_height)
   
 def real_time_test():
-   min_distance = 170
+   min_distance = 49000
    knn = Knn()
    knn.run()
    capture = cv2.VideoCapture(0)
@@ -354,8 +356,7 @@ def chart_data():
     all_features = []
     all_labels = []
     all_class_names = []
-    max_elems = 64
-    orb = cv2.ORB_create(nfeatures=max_elems)
+
     for row in loader.files:
         imgs_fnames = row['imgs_per_class']
         features = []
@@ -364,18 +365,11 @@ def chart_data():
         for f_name in imgs_fnames:
             img = cv2.imread(f_name,cv2.IMREAD_GRAYSCALE)
             img = cv2.resize(img,(64,128),interpolation=cv2.INTER_AREA)
-            #descr = local_binary_pattern(image=img,P=8 * 3,R=3,method='default')
-            #descr = descr.ravel()
-            #hist,_ = np.histogram(descr,bins=np.arange(255))
-            #descr = hist
-            kp = orb.detect(img,None)
-            kp,descr = orb.compute(img,kp) 
-            #print(descr.shape)
-            #exit(1)
-            if descr is None:
-              continue
-            print(descr.shape)
-            features.append(descr.ravel())
+            descr = local_binary_pattern(image=img,P=8,R=1,method='default')
+            descr = descr.ravel()
+            hist,_ = np.histogram(descr,bins=np.arange(255))
+            descr = hist
+            features.append(descr)
             labels.append(row['index'])
             class_names.append(row['class_name'])
         row['features'] = np.array(features)       
@@ -385,16 +379,7 @@ def chart_data():
     all_features = np.array(all_features)
     all_labels = np.array(all_labels)
     
-    arr = np.zeros(shape=(all_features.shape[0],max_elems))
-    
-    for i in range(all_features.shape[0]):
-      feature = all_features[i]
-      for j in range(feature.shape[0]):
-          if j < max_elems:
-            arr[i][j] = feature[j]
-          else:
-            break     
-    all_features = arr
+  
     print(all_features.shape)
     print(all_labels.shape)
     
