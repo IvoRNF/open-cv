@@ -390,7 +390,15 @@ def chart_data():
     plt.title('captures dataset')
     ax.legend(loc='best')
     plt.show()
-    
+
+def remove_border_slices(img,fator=0.1):
+    h,w = img.shape[:2]
+    part_h = int(h * fator)
+    part_w = int(w * fator)
+    result = np.zeros(shape=(h-part_h*2,w-part_w*2))
+    result = img[part_h:h-part_h,part_w:w-part_w]
+    return cv2.resize(result,(w,h),interpolation=cv2.INTER_AREA)  
+
 def main():
     print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste pyr\n6 chart')
     v = input()
@@ -422,9 +430,18 @@ def main():
           break
       cv2.destroyAllWindows()
     elif v=='6':
-        chart_data()  
-      
-      
+        chart_data()
+    else:
+      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\281.jpg',cv2.IMREAD_GRAYSCALE)      
+      while 1:
+        k = cv2.waitKey(0)
+        if k==ord('q'):
+          break
+        cv2.imshow('1',img)
+
+        img2 = remove_border_slices(img.copy())
+        img2 = cv2.fastNlMeansDenoising(img2)
+        cv2.imshow('2',img2)  
         
 
 if __name__ == '__main__':
