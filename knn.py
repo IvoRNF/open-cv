@@ -38,7 +38,7 @@ class Knn(FileLoader):
              dirs = row['imgs_per_class']
              idx = row['index']
              for file_name in dirs:
-                descriptor = self.getDescriptor( cv2.imread(file_name,cv2.IMREAD_GRAYSCALE))
+                descriptor = getDescriptor( cv2.imread(file_name,cv2.IMREAD_GRAYSCALE),self.shape)
                 descriptors.append(descriptor)
                 responses.append(idx)
          print('training')
@@ -58,49 +58,12 @@ class Knn(FileLoader):
         self.knn.save(self.knn_fname)
         print('saving knn to file')  
     
-    def getDescriptor(self,sample,descr_open_cv=False):
-      sampleToPredict = sample
-      if len(sampleToPredict.shape)>2:
-        sampleToPredict = remove_ilumination(sampleToPredict)
-        sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)  
-      if sampleToPredict.shape != self.shape:
-          reversedShape = self.shape[::-1]
-          sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)  
-      if(descr_open_cv):
-        #ORB
-        
-        descr_sz = 64
-        descr = np.zeros(descr_sz) # tamanho max baseado em experimento
-        orb = cv2.ORB_create(nfeatures=descr_sz)
-        kp = orb.detect(sampleToPredict,None)
-        kp,orb_desc = orb.compute(sampleToPredict,kp)
-        if orb_desc is not None: 
-          orb_desc = orb_desc.ravel()
-          for i in range(orb_desc.shape[0]):
-            if i < descr_sz:
-              descr[i] = orb_desc[i]  
-            else:
-              break  
-                  
-        #HOG
-        #descr = self.hog.compute(sampleToPredict) #opencv hog
-        #descr = np.squeeze(descr)
-      else:
-        # HOG skimage
-        #descr =hog(sampleToPredict,orientations=8,pixels_per_cell=(4,4),
-        #                    cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog 
-        #LBPH
-    
-        descr = local_binary_pattern(image=sampleToPredict,P=8,R=1,method='default')
-        descr = descr.ravel()
-        hist,_ = np.histogram(descr,bins=np.arange(255))
-        descr = hist                         
-      return descr
+  
     def processAndPredict(self,sample , k = 6):
-        descriptor = self.getDescriptor(sample)  
+        descriptor = getDescriptor(sample,self.shape)  
         return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
     def pyrDown(self,img,levels=1):
-        for i in range(levels):
+        for _ in range(levels):
             img = cv2.pyrDown(img)
         return img
 def middleRects(shape,start=2,end=8,step=1,center_x=0,center_y=0):
@@ -114,7 +77,7 @@ def middleRects(shape,start=2,end=8,step=1,center_x=0,center_y=0):
       yield (x,y,rect_width,rect_height)
   
 def real_time_test():
-   min_distance = 49000
+   min_distance = 0.01
    knn = Knn()
    knn.run()
    capture = cv2.VideoCapture(0)
@@ -141,8 +104,8 @@ def real_time_test():
       roi = frame[y:y+h,x:x+w]
       response = knn.processAndPredict(roi)
       distance = np.sum ( np.squeeze(response[3]) )
-      
-      if(distance < min_distance):
+      #cv2.putText(frame_cpy,'%.2f %s' % (distance,knn.class_names[int(response[0])]),(x,y),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2) 
+      if(distance <= min_distance):
         tracker = dlib.correlation_tracker()
         t_rect = dlib.rectangle(x,y,x+w,y+h)
         tracker.start_track( cv2.cvtColor(frame,cv2.COLOR_BGR2RGB) ,t_rect)
@@ -192,8 +155,9 @@ def evaluate_knn():
           correct = (predicted_class_idx==class_idx)
           if(correct):
              eval_arr[class_idx] += 1
-          print('%s %d classificado como %d - arquivo %s'
-                % (class_name,class_idx,predicted_class_idx, os.path.basename(fname) ))
+          distance = np.sum( np.squeeze(response[3]) )
+          print( '%s %d classificado como %d - arquivo %s, distance %.2f'
+                % (class_name,class_idx,predicted_class_idx, os.path.basename(fname),distance ))
     for i in range( eval_arr.shape[0] ): 
        count_corrects = eval_arr[i]
        row = knn.files_test[i]
@@ -211,7 +175,7 @@ def show_std():
   for row in knn.files:
      imgs = row['imgs_per_class']
      for fname in imgs: 
-       descriptors.append(  knn.getDescriptor( cv2.imread(fname , cv2.IMREAD_GRAYSCALE) )  )
+       descriptors.append(  getDescriptor( cv2.imread(fname , cv2.IMREAD_GRAYSCALE) ),knn.shape  )
   descriptors = np.array(descriptors)
   stds = np.std(descriptors,axis=0)
   stds = stds * 100
@@ -363,12 +327,8 @@ def chart_data():
         labels = []
         class_names = []
         for f_name in imgs_fnames:
-            img = cv2.imread(f_name,cv2.IMREAD_GRAYSCALE)
-            img = cv2.resize(img,(64,128),interpolation=cv2.INTER_AREA)
-            descr = local_binary_pattern(image=img,P=8,R=1,method='default')
-            descr = descr.ravel()
-            hist,_ = np.histogram(descr,bins=np.arange(255))
-            descr = hist
+            img = cv2.imread(f_name)
+            descr = getDescriptor(img,expected_shape=(128,64)) 
             features.append(descr)
             labels.append(row['index'])
             class_names.append(row['class_name'])
@@ -378,11 +338,13 @@ def chart_data():
         all_class_names.extend(class_names)
     all_features = np.array(all_features)
     all_labels = np.array(all_labels)
-    
   
+    stds = np.std(all_features,axis=0)  
+    all_features = all_features[:,stds > 0.0003]
+    
     print(all_features.shape)
     print(all_labels.shape)
-    
+
     for label,label_name in zip(np.unique(all_labels),np.unique(all_class_names)):
       features = all_features[ all_labels==label ,:]
       transformed = pca.fit_transform(features)
@@ -391,7 +353,7 @@ def chart_data():
     ax.legend(loc='best')
     plt.show()
 
-def remove_border_slices(img,fator=0.1):
+def remove_border_slices(img,fator=0.05):
     h,w = img.shape[:2]
     part_h = int(h * fator)
     part_w = int(w * fator)
@@ -399,6 +361,47 @@ def remove_border_slices(img,fator=0.1):
     result = img[part_h:h-part_h,part_w:w-part_w]
     return cv2.resize(result,(w,h),interpolation=cv2.INTER_AREA)  
 
+def getDescriptor(sample,expected_shape=(128,64) ,descr_open_cv=False):
+      sampleToPredict = sample
+      if len(sampleToPredict.shape)>2:
+        sampleToPredict = remove_ilumination(sampleToPredict)
+        sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)  
+      if sampleToPredict.shape != expected_shape:
+          reversedShape = expected_shape[::-1]
+          sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)
+      sampleToPredict = remove_border_slices(img=sampleToPredict,fator=0.07)      
+      sampleToPredict = cv2.fastNlMeansDenoising(sampleToPredict)
+      sampleToPredict = cv2.equalizeHist(sampleToPredict)
+      if(descr_open_cv):
+        #ORB
+        
+        descr_sz = 64
+        descr = np.zeros(descr_sz) # tamanho max baseado em experimento
+        orb = cv2.ORB_create(nfeatures=descr_sz)
+        kp = orb.detect(sampleToPredict,None)
+        kp,orb_desc = orb.compute(sampleToPredict,kp)
+        if orb_desc is not None: 
+          orb_desc = orb_desc.ravel()
+          for i in range(orb_desc.shape[0]):
+            if i < descr_sz:
+              descr[i] = orb_desc[i]  
+            else:
+              break  
+                  
+        #HOG
+        #descr = self.hog.compute(sampleToPredict) #opencv hog
+        #descr = np.squeeze(descr)
+      else:
+        # HOG skimage
+        #descr =hog(sampleToPredict,orientations=8,pixels_per_cell=(4,4),
+        #                    cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog 
+        #LBPH
+    
+        descr = local_binary_pattern(image=sampleToPredict,P=8,R=1,method='default')
+        descr = descr.ravel()
+        hist,_ = np.histogram(descr,bins=np.arange(255),density=True)
+        descr = hist                         
+      return descr
 def main():
     print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste pyr\n6 chart')
     v = input()
@@ -431,17 +434,6 @@ def main():
       cv2.destroyAllWindows()
     elif v=='6':
         chart_data()
-    else:
-      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\281.jpg',cv2.IMREAD_GRAYSCALE)      
-      while 1:
-        k = cv2.waitKey(0)
-        if k==ord('q'):
-          break
-        cv2.imshow('1',img)
-
-        img2 = remove_border_slices(img.copy())
-        img2 = cv2.fastNlMeansDenoising(img2)
-        cv2.imshow('2',img2)  
         
 
 if __name__ == '__main__':
