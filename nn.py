@@ -1,132 +1,141 @@
 import numpy as np 
+from ga import GeneticAlgorithm
+import pickle 
+import os
 
 
 class MyNeuralNetwork:
 
-    def __init__(self,max_iterations=1000,learning_rate = 0.0001,activation_func='softmax',n_hidden_layers=1, output_layer_size=0):
-        self.max_iterations= max_iterations
-        self.learning_rate = learning_rate
-        self.activation_func = activation_func
-        self.n_hidden_layers = n_hidden_layers
+    def __init__(self,inpt_layer_size,hidden_layer_sizes,output_layer_size,model_f_name,logging=True):
+        self.model_f_name = model_f_name
+        self.inpt_layer_size = inpt_layer_size 
+        self.hidden_layer_sizes = hidden_layer_sizes 
         self.output_layer_size = output_layer_size
-        self.logging = True
- 
-    def softmax(self,inpt):
-       return np.exp(inpt)/np.sum( np.exp(inpt) )
-
-    def fit(self,x:np.ndarray,y:np.ndarray):
-        self.inputs = x 
-        self.desired_outputs = y
-        neuron_count =  self.inputs.shape[1]
+        self.logging = logging
         self.weights = []
-        for _ in range(self.n_hidden_layers): 
-            weights_of_layer = np.random.uniform(low=0,high=0.1,size=(neuron_count  + 1))
-            self.weights.append([weights_of_layer]) 
-        output_layer_wts = []    
-        for _ in range(self.output_layer_size): 
-            weights_of_layer = np.random.uniform(low=0,high=0.1,size=(self.n_hidden_layers  + 1))
-            output_layer_wts.append(weights_of_layer)
-        self.weights.append(output_layer_wts)   
-        self.neurons_metadata = []
-        for layer in self.weights: 
-            arr = []
-            for _ in layer:
-                arr.append({})
-            self.neurons_metadata.append(arr)
-        self.train()     
+        self.biases = []
 
-    def loss_func(self,desired,predicted): 
-         return  0.5 * np.power(desired-predicted,2)
-    def relu(self,input_vl):
-        result = input_vl
-        if result < 0:
-            result = 0 
-        return result 
+
+    def log(self,msg=None):
+        if not self.logging:
+            return 
+        if msg is None:
+           print()
+        else:       
+           print(msg) 
+
+    def init_bias(self):
+        self.biases = np.random.uniform(low=-0.1,high=0.1,size=(len(self.weights)))      
+
+    def init_weights(self):
+        last_input_sz =  self.inpt_layer_size
+        for neuron_count in [*self.hidden_layer_sizes,self.output_layer_size]: 
+            weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(last_input_sz,neuron_count))
+            self.weights.append(weights_of_layer) 
+            last_input_sz = neuron_count 
+
+    def softmax(self,inpt):
+        return np.exp(inpt)/np.sum( np.exp(inpt) )  
+
     def sigmoid(self,input_vl): 
-        return 1.0/(1.0+np.exp(-1 * input_vl)) 
+        return 1.0/(1.0+np.exp(-1 * input_vl))  
 
-
-    def backward_propagate_error(self,expected):
-        for i in reversed(range(len(self.weights))):
-            layer = self.weights[i]
-            errors = []
-            if i != len(self.weights)-1:
-                for j in range(len(layer)):
-                    err = 0.0
-                    for k in range( len(self.weights[i + 1]) ):
-                        neur = self.weights[i + 1][k]
-                        err += (neur[j] * self.neurons_metadata[i+1][k]['delta'])
-                    errors.append(err)
-            else:
-                for j in range(len(layer)):   
-                    output = self.neurons_metadata[i][j]['output']
-                    loss = expected[j] - output
-                    errors.append( loss )
-            for j in range(len(layer)):
-                output = self.neurons_metadata[i][j]['output']
-                #transfer derivative
-                self.neurons_metadata[i][j]['delta'] = errors[j] * output * (1 - output)       
-
-    def update_weights(self,inpt):
+    def predict(self,inpt):
+        y = inpt
         for i in range(len(self.weights)):
-            layer = self.weights[i]
-            inputs = inpt#[:-1] # remove o bias ?
-            if i != 0:
-                previous_layer = self.weights[i - 1]
-                inputs = [ self.neurons_metadata[i][j]['output'] for j in range(len(previous_layer))]
-            for j in range(len(layer)):
-                delta = self.neurons_metadata[i][j]['delta']
-                for k in range(len(inputs)):
-                    self.weights[i][j][k] += self.learning_rate * delta * inputs[k]
-                self.weights[i][j][-1] += self.learning_rate * delta  
+            w = self.weights[i]
+            b = self.biases[i]
+            y = np.dot(y,w)  + b
+            y = self.sigmoid(y)
+        return y 
+    def weights_flattened(self):
+        result = []
+        for layer in self.weights: 
+            for vl in layer.flat: 
+              result.append(vl)
+        return np.array(result,dtype=np.float64)
+    def weights_unflattened(self,flattened):
+        if len(self.weights)==0:
+            self.init_weights()
+        result = [] 
+        start_idx = 0
+        for layer in self.weights: 
+            wts_of_layer = flattened[start_idx: start_idx + layer.shape[0]*layer.shape[1] ] 
+            start_idx += (len(wts_of_layer)) 
+            wts_of_layer = np.array(wts_of_layer,dtype=np.float64)
+            wts_of_layer = np.reshape(wts_of_layer,newshape=layer.shape) 
+            result.append(wts_of_layer) 
+        return result    
+    def fit(self,x,y):
+       self.x_train = x 
+       self.y_train = y    
+
+    def eval_model(self,ret_stats=False):
+        acc = 0
+        c_correct = []
+        probs = []
+        for x,y in zip(self.x_train,self.y_train): 
+            arr = self.predict(x)
+            label = np.argmax(arr)
+            probs.append(arr)
+            if(label == y):    
+                c_correct.append(1)
+                prob = arr[label]
+                if prob > 0: 
+                    acc += prob   
+        acc = (acc / len(self.y_train))
+        if ret_stats:
+            return {'acc_float': acc, 'acc_int':len(c_correct)/len(self.y_train),'probs':[ (self.y_train[x],probs[x]) for x in np.arange(len(self.y_train)) ]}         
+        return acc
+    def fitness_func(self,sol):   
+        self.weights = self.weights_unflattened(sol)
+        return self.eval_model()
+    def load(self):
+        with open(self.model_f_name,'rb') as f:
+           mapa = pickle.load(f)
+           self.weights = self.weights_unflattened(mapa['weights'])
+           self.biases = mapa['bias']
+        print('loaded model from file')  
+    def save(self):
+        with open(self.model_f_name,'wb') as f:
+           mapa = {"weights":self.weights,"bias":self.biases} 
+           pickle.dump(mapa,f)
+        print('saved model to file %s' % (self.model_f_name))        
+
+
+if __name__ == '__main__':
+
+    model_f_name = './datasets/my_nn77.pk'
+    inpt_sz = 3
+    hidden_szs = [2]
+    outpt_sz = 2
+    x_train = [[0,0,255],[0,100,0],[0,0,255],[0,0,255],[0,255,0],[0,255,0],[0,255,0]]
+    y_train = [0,1,0,0,1,1,1]
         
-    def log(self,msg):
-        if self.logging:
-           print(msg)
-    def train(self): 
-        i= 0 
-        self.log('training')
-        while (i < self.max_iterations): 
-              for inpt,desired_outpt in zip(self.inputs,self.desired_outputs):
-                  self.predict(inpt)
-                  self.backward_propagate_error(desired_outpt)
-                  self.update_weights(inpt)
-              i += 1   
-        self.log('trained')      
-    def predict(self,input_vl):  
-        func_name = self.activation_func
-        func = getattr(self,func_name)
-        out_in = input_vl
-        for i in range(len(self.weights)): 
-            layer_w = self.weights[i]
-            new_inputs = []
-            for j in range(len(layer_w)):
-                neuron = layer_w[j] 
-                activ = neuron[-1] # bias 
-                for k in range(neuron.shape[0]-1):
-                   activ += neuron[k] * out_in[k]
-                activ = func(activ)   
-                new_inputs.append(activ)
-                self.neurons_metadata[i][j]['output'] = activ 
-            out_in = new_inputs
-        return out_in    
-if __name__ == '__main__': 
-    inputs_train = np.array([[0,255],[255,0],[255,0],[255,0],[0,255],[0,255]])
-    outputs_train = np.array([[1,0],[0,1],[0,1],[0,1],[1,0],[1,0]])  
-    nn = MyNeuralNetwork(n_hidden_layers=1,output_layer_size=2,max_iterations=30000,activation_func='sigmoid',learning_rate=0.7)
-    nn.fit(x=inputs_train,y=outputs_train)
-
-
-    for inpt,outpt in zip(inputs_train,outputs_train): 
-        predicted_vls = nn.predict(inpt)
-        predicted_num = np.argmax(predicted_vls)
-        expected_num = np.argmax(outpt)
-        if predicted_num != expected_num:
-          print('error')
-        print('%d predicted as %d ' % (expected_num,predicted_num))
-        print(predicted_vls)
-    
-
-
-
-    
+    if not os.path.exists(model_f_name):
+        print('training')
+        nn = MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
+        nn.fit(x_train,y_train)
+        nn.init_weights()
+        nn.init_bias()
+        flattened = nn.weights_flattened()
+        initial_solutions = np.random.uniform(low=-1.0,high=1.0,size=(20,len(flattened)))
+        initial_solutions[0] = np.array(flattened,dtype=np.float64)
+        ga = GeneticAlgorithm(
+            solutions=initial_solutions, 
+            num_parents_for_mating=4,
+            generations=90,
+            fitness_func=nn.fitness_func ,
+            offspring_sz=4
+        )
+        ga.start()
+        nn.weights = ga.solutions[0]
+        nn.save()
+    else:    
+        nn= MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
+        nn.fit(x_train,y_train)
+        nn.load()   
+        print(nn.predict([0,0,255]))
+        stats = nn.eval_model(ret_stats=True)
+        print(stats)
+     

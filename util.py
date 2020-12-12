@@ -3,6 +3,33 @@ import cv2
 import os
 from non_max_suppression_fast import non_max_suppression_fast as nms
 
+import math
+
+def scale_rect(shape_origin, shape_dest,rect):
+     x,y,w,h = rect 
+     scaleH = shape_dest[0]/float(shape_origin[0])
+     scaleX = shape_dest[1]/float(shape_origin[1])
+     return  (int(x*scaleX),int(y*scaleH),int(w*scaleX),int(h*scaleH))
+    
+def middleRects(shape,start=2,end=8,step=1,center_x=0,center_y=0):
+   h,w = shape[:2]
+   for i in np.arange(start,end,step):
+      factor = i/10
+      rect_width = int(h * factor) #inverte em paisagem
+      rect_height = int(w * factor)
+      x = (center_x - rect_width//2)
+      y = (center_y - rect_height//2)     
+      yield (x,y,rect_width,rect_height)
+      
+def circular_center_points(frame): 
+   middle_w = frame.shape[1]//2
+   middle_h = frame.shape[0]//2
+   for radius in np.arange(0,20,20):
+    for degree in np.arange(0,360,80):
+        x = middle_w + radius * math.cos(degree * math.pi/180)
+        y = middle_h + radius * math.sin(degree * math.pi/180)
+        yield (round(y),round(x))
+
 
 class OpenCvTests:
 
@@ -10,9 +37,7 @@ class OpenCvTests:
     
       self.snapshotIdx = 0
   
-  
 
-  
   def showContours(self): 
     img = np.zeros((200,200),dtype=np.uint8) 
     squareWidth = 100
@@ -110,6 +135,29 @@ class OpenCvTests:
     cv2.destroyAllWindows()
     capture.release()
 
+  def matchKeypoints(self,path1 : str , path2 : str, pyrDownCount=0):
+      img1 = cv2.imread(path1,cv2.IMREAD_GRAYSCALE)
+      img2 = cv2.imread(path2,cv2.IMREAD_GRAYSCALE)
+      for i in range(0,pyrDownCount):
+        img2 = cv2.pyrDown(img2)
+      sift = cv2.xfeatures2d.SIFT_create()
+      kp1,des1 = sift.detectAndCompute(img1,None)
+      kp2,des2 = sift.detectAndCompute(img2,None)
+      FLANN_IDX_KDTREE = 1
+      idx_params = dict(algorithm=FLANN_IDX_KDTREE, trees = 5)
+      search_params = dict(checks=5)
+      flann = cv2.FlannBasedMatcher(idx_params,search_params)
+      matches = flann.knnMatch(des1,des2,k=2)
+      matchesMask = [[0,0] for i in range(len(matches))]
+      for i,(m,n) in enumerate(matches):
+        if m.distance <0.7 * n.distance:
+          matchesMask[i]=[1,0]
+      draw_params = dict(matchColor=(0,255,0),
+                         singlePointColor=(255,0,0),
+                         matchesMask=matchesMask,
+                         flags=cv2.DrawMatchesFlags_DEFAULT)
+      img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
+      return img3 
   def backgroundSubtractor(self,callback = None,capture_file=0):
     capture = cv2.VideoCapture(capture_file)
     bkSubtractor = cv2.createBackgroundSubtractorKNN(detectShadows=True)
@@ -240,29 +288,7 @@ class OpenCvTests:
       if k == ord('s'):
         cv2.imwrite(path,self.img)
     cv2.destroyAllWindows()
-  def matchKeypoints(self,path1 : str , path2 : str, pyrDownCount=0):
-      img1 = cv2.imread(path1,cv2.IMREAD_GRAYSCALE)
-      img2 = cv2.imread(path2,cv2.IMREAD_GRAYSCALE)
-      for i in range(0,pyrDownCount):
-        img2 = cv2.pyrDown(img2)
-      sift = cv2.xfeatures2d.SIFT_create()
-      kp1,des1 = sift.detectAndCompute(img1,None)
-      kp2,des2 = sift.detectAndCompute(img2,None)
-      FLANN_IDX_KDTREE = 1
-      idx_params = dict(algorithm=FLANN_IDX_KDTREE, trees = 5)
-      search_params = dict(checks=5)
-      flann = cv2.FlannBasedMatcher(idx_params,search_params)
-      matches = flann.knnMatch(des1,des2,k=2)
-      matchesMask = [[0,0] for i in range(len(matches))]
-      for i,(m,n) in enumerate(matches):
-        if m.distance <0.7 * n.distance:
-          matchesMask[i]=[1,0]
-      draw_params = dict(matchColor=(0,255,0),
-                         singlePointColor=(255,0,0),
-                         matchesMask=matchesMask,
-                         flags=cv2.DrawMatchesFlags_DEFAULT)
-      img3 = cv2.drawMatchesKnn(img1,kp1,img2,kp2,matches,None,**draw_params)
-      return img3 
+  
 
   def getBiggestContourRect(self,img_ : np.ndarray):
     img = img_.copy()
@@ -295,13 +321,13 @@ class OpenCvTests:
       img = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
     img = np.float32(img)
     dest = cv2.cornerHarris(img,5,23,0.05)
-    menorX = img.shape[0]
+    menorX = img_.shape[0]
     maiorX = 0
     maiorY = 0
-    menorY = img.shape[1]
+    menorY = img_.shape[1]
     maxi = dest.max()
-    fatorX = int(img.shape[0]*factor_as_corner)
-    fatorY = int(img.shape[1]*factor_as_corner)
+    fatorX = int(img_.shape[0]*factor_as_corner)
+    fatorY = int(img_.shape[1]*factor_as_corner)
     
     for (x,y),elem in np.ndenumerate(dest):
        if( elem >(0.01*maxi)):
@@ -317,8 +343,8 @@ class OpenCvTests:
     y = menorX
     w = (maiorY - menorY) 
     h =  (maiorX - menorX)
-    gapY = int(img.shape[0]*zoom_up_rect)
-    gapX = int(img.shape[1]*zoom_up_rect)
+    gapY = int(img_.shape[0]*zoom_up_rect)
+    gapX = int(img_.shape[1]*zoom_up_rect)
     if(y - gapY)>0:
       y = y - gapY
       h = h+gapY*2

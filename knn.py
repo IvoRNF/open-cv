@@ -4,13 +4,14 @@ import os
 import time
 import math
 import matplotlib.pyplot as plt 
-from skimage.feature import hog
-from skimage.feature import local_binary_pattern
 from skimage import exposure
 from file_loader import FileLoader
 import dlib 
 from sklearn.decomposition import PCA
 from mpl_toolkits.mplot3d import Axes3D
+from feature import getDescriptor
+from util import middleRects
+
 class Knn(FileLoader):
     
     def __init__(self):
@@ -18,7 +19,6 @@ class Knn(FileLoader):
         self.knn_fname = './my_knn.xml'
         self.loaded = False
         self.shape = (128,64)
-        self.hog = self.createHog()
         if os.path.exists(self.knn_fname):
             print('loading knn from file')
             self.loaded = True
@@ -48,33 +48,20 @@ class Knn(FileLoader):
                         np.array(responses,dtype=np.float32)
                         )
          print('trained')
-        
-    def createHog(self):
-        #necessario aspect ratio 1:2
-        hog = cv2.HOGDescriptor()
-        return hog            
+                   
     def train(self,data , labels):
         self.knn.train(data,cv2.ml.ROW_SAMPLE,labels)
         self.knn.save(self.knn_fname)
         print('saving knn to file')  
     
   
-    def processAndPredict(self,sample , k = 6):
+    def processAndPredict(self,sample , k = 3):
         descriptor = getDescriptor(sample,self.shape)  
         return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
     def pyrDown(self,img,levels=1):
         for _ in range(levels):
             img = cv2.pyrDown(img)
         return img
-def middleRects(shape,start=2,end=8,step=1,center_x=0,center_y=0):
-   h,w = shape[:2]
-   for i in np.arange(start,end,step):
-      factor = i/10
-      rect_width = int(h * factor) #inverte em paisagem
-      rect_height = int(w * factor)
-      x = (center_x - rect_width//2)
-      y = (center_y - rect_height//2)     
-      yield (x,y,rect_width,rect_height)
   
 def real_time_test():
    min_distance = 0.01
@@ -228,87 +215,11 @@ def capture():
      sucess,frame = capture.read()     
    capture.release()   
    cv2.destroyAllWindows()
-def sliding_window(step_y=20,step_x=20, window_size=(100, 40),x_start=0,y_start=0,y_end=0,x_end=0):
-    window_w, window_h = window_size
-    for y in np.arange(y_start, y_end, step_y):
-      for x in np.arange(x_start, x_end, step_x):
-        yield (x, y, window_w,window_h)
-def pyramid(img, scale_factor=1.25, min_size=(150,200),max_size=(600, 600)):
-    h, w =  img.shape[:2]
-    min_w, min_h = min_size
-    max_w, max_h = max_size
-    while w >= min_w and h >= min_h:
-      if w <= max_w and h <= max_h:
-        yield img
-      w /= scale_factor
-      h /= scale_factor
-      img = cv2.resize(img, (int(w), int(h)),interpolation=cv2.INTER_LINEAR)  
-def scale_rect(shape_origin, shape_dest,rect):
-     x,y,w,h = rect 
-     scaleH = shape_dest[0]/float(shape_origin[0])
-     scaleX = shape_dest[1]/float(shape_origin[1])
-     return  (int(x*scaleX),int(y*scaleH),int(w*scaleX),int(h*scaleH))
-    
-def detect_mult_scale(img,threashold=170,winSize=(70,100),winStep=20,knn=None): 
-  h,w = img.shape[:2]
-  result = None
-  min_distance = 170
-  win_w,win_h = winSize
-  for resized in pyramid(img,1.25,(38,50),(w,h)):
-     for (x,y,w,h) in sliding_window(resized,winStep,winSize):
-         roi = resized[x:x+h,y:y+w]
-         if (roi.shape[0]>=win_h) and(roi.shape[1]>=win_w):
-           response = knn.processAndPredict(roi)
-           distance = np.sum ( np.squeeze(response[3]) )
-           if distance <  min_distance:
-              predicted_class_idx = response[0]
-              result = (predicted_class_idx,distance,scale_rect(resized.shape,img.shape,(x,y,w,h)))
-              min_distance = distance
-           if distance <= threashold:
-              return result   
-  return result  
-      
-def circular_center_points(frame): 
-   middle_w = frame.shape[1]//2
-   middle_h = frame.shape[0]//2
-   for radius in np.arange(0,20,20):
-    for degree in np.arange(0,360,80):
-        x = middle_w + radius * math.cos(degree * math.pi/180)
-        y = middle_h + radius * math.sin(degree * math.pi/180)
-        yield (round(y),round(x))
 
-def remove_ilumination(img): 
-    hsv = cv2.cvtColor(img,cv2.COLOR_BGR2HSV) 
-    (h,s,v) = cv2.split(hsv) 
-    s[:] = 0
-    h[:] = 0
-    hsvValueOnly = cv2.merge([h,s,v])
-    converted = cv2.cvtColor(hsvValueOnly,cv2.COLOR_HSV2BGR) 
-    return converted
-def pyr(img , factor=0.15,levels=5): 
-    h,w = img.shape[:2] 
-    yield img.copy()
-    for level in np.arange(levels):
-      new_sz = (int(w-(w*factor)),int(h-(h*factor)))
-      w,h = new_sz
-      yield cv2.resize(img,new_sz)
-def detect(img,knn,pyrLevels=3,min_distance=170,win_sz=(300,400)):
-  founded = None
-  frame = img.copy() 
-  if len(frame.shape)>2:
-    frame = cv2.cvtColor(frame,cv2.COLOR_BGR2GRAY)
-  min_founded = 9999   
-  for resized in pyr(frame,levels=pyrLevels):
-    for (x,y,w,h) in sliding_window(step_x=15,step_y=15,window_size=win_sz,y_end=frame.shape[0], x_end=frame.shape[1]):  
-        roi = resized[y:y+h,x:x+w]
-        if (roi.shape[0]==0) or (roi.shape[1]==0) :
-          continue 
-        response = knn.processAndPredict(roi)   
-        distance = np.sum ( np.squeeze(response[3]) )   
-        if (distance < min_founded) and (distance<=min_distance):
-             min_founded = distance
-             founded = (distance,resized.shape,(x,y,w,h))  
-  return founded    
+  
+
+
+   
 def chart_data(): 
     loader = FileLoader(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
     loader.load_files()
@@ -353,57 +264,9 @@ def chart_data():
     ax.legend(loc='best')
     plt.show()
 
-def remove_border_slices(img,fator=0.05):
-    h,w = img.shape[:2]
-    part_h = int(h * fator)
-    part_w = int(w * fator)
-    result = np.zeros(shape=(h-part_h*2,w-part_w*2))
-    result = img[part_h:h-part_h,part_w:w-part_w]
-    return cv2.resize(result,(w,h),interpolation=cv2.INTER_AREA)  
 
-def getDescriptor(sample,expected_shape=(128,64) ,descr_open_cv=False):
-      sampleToPredict = sample
-      if len(sampleToPredict.shape)>2:
-        sampleToPredict = remove_ilumination(sampleToPredict)
-        sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)  
-      if sampleToPredict.shape != expected_shape:
-          reversedShape = expected_shape[::-1]
-          sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)
-      sampleToPredict = remove_border_slices(img=sampleToPredict,fator=0.07)      
-      sampleToPredict = cv2.fastNlMeansDenoising(sampleToPredict)
-      sampleToPredict = cv2.equalizeHist(sampleToPredict)
-      if(descr_open_cv):
-        #ORB
-        
-        descr_sz = 64
-        descr = np.zeros(descr_sz) # tamanho max baseado em experimento
-        orb = cv2.ORB_create(nfeatures=descr_sz)
-        kp = orb.detect(sampleToPredict,None)
-        kp,orb_desc = orb.compute(sampleToPredict,kp)
-        if orb_desc is not None: 
-          orb_desc = orb_desc.ravel()
-          for i in range(orb_desc.shape[0]):
-            if i < descr_sz:
-              descr[i] = orb_desc[i]  
-            else:
-              break  
-                  
-        #HOG
-        #descr = self.hog.compute(sampleToPredict) #opencv hog
-        #descr = np.squeeze(descr)
-      else:
-        # HOG skimage
-        #descr =hog(sampleToPredict,orientations=8,pixels_per_cell=(4,4),
-        #                    cells_per_block=(1,1),visualize=False,multichannel=False) #skimage hog 
-        #LBPH
-    
-        descr = local_binary_pattern(image=sampleToPredict,P=8,R=1,method='default')
-        descr = descr.ravel()
-        hist,_ = np.histogram(descr,bins=np.arange(255),density=True)
-        descr = hist                         
-      return descr
 def main():
-    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 teste pyr\n6 chart')
+    print('1 para evaluate \n2 para real time test\n3 capturar\n4 show std\n5 chart')
     v = input()
     if v =='1':  
       evaluate_knn()
@@ -414,25 +277,6 @@ def main():
     elif v=='4':
       show_std() 
     elif v=='5':
-      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\testes_captures\24.jpg')
-      knn = Knn()
-      knn.run()
-      start_t = time.time()
-      resp = detect(img,knn,pyrLevels=3,min_distance=170,win_sz=(300,400)) 
-      print(resp)
-      print("--- %s seconds ---" % (time.time() - start_t))
-      if(resp==None):
-        return
-      distance, res,rect = resp
-      x,y,w,h = rect
-      cv2.rectangle(img,(x,y),(x+w,y+h),(0,255,0),1)
-      while(True):
-        cv2.imshow('',img)
-        k = cv2.waitKey(10)
-        if k == ord('q'):
-          break
-      cv2.destroyAllWindows()
-    elif v=='6':
         chart_data()
         
 
