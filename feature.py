@@ -21,18 +21,27 @@ def remove_ilumination(img):
     hsvValueOnly = cv2.merge([h,s,v])
     converted = cv2.cvtColor(hsvValueOnly,cv2.COLOR_HSV2BGR) 
     return converted
+def gamma_correction(img,gamma = 0.5): 
+    invGamma = 1.0/gamma
+    table = np.array([ ((i/255.0)**invGamma)*255 for i in np.arange(0,256)],dtype=np.uint8)
+    return cv2.LUT(img,table)
+
+def pre_process(sample,expected_shape=(128,64),gamma=0.5):
+    sampleToPredict = sample
+    if len(sampleToPredict.shape)>2:
+      sampleToPredict = remove_ilumination(sampleToPredict)
+      sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)  
+    if sampleToPredict.shape != expected_shape:
+        reversedShape = expected_shape[::-1]
+        sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)
+    sampleToPredict = remove_border_slices(img=sampleToPredict,fator=0.07)      
+    sampleToPredict = cv2.fastNlMeansDenoising(sampleToPredict)
+    sampleToPredict = gamma_correction(sampleToPredict,gamma)
+    sampleToPredict = cv2.equalizeHist(sampleToPredict)
+    return sampleToPredict
 
 def getDescriptor(sample,expected_shape=(128,64) ,descr_open_cv=False,name='LBPH'):
-      sampleToPredict = sample
-      if len(sampleToPredict.shape)>2:
-        sampleToPredict = remove_ilumination(sampleToPredict)
-        sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)  
-      if sampleToPredict.shape != expected_shape:
-          reversedShape = expected_shape[::-1]
-          sampleToPredict = cv2.resize(sampleToPredict,reversedShape,interpolation=cv2.INTER_AREA)
-      sampleToPredict = remove_border_slices(img=sampleToPredict,fator=0.07)      
-      sampleToPredict = cv2.fastNlMeansDenoising(sampleToPredict)
-      sampleToPredict = cv2.equalizeHist(sampleToPredict)
+      sampleToPredict = pre_process(sample,expected_shape)
       descr = None
       if(descr_open_cv):
         if name=='ORB':
@@ -59,6 +68,6 @@ def getDescriptor(sample,expected_shape=(128,64) ,descr_open_cv=False,name='LBPH
         elif name=='LBPH':  
           descr = local_binary_pattern(image=sampleToPredict,P=8,R=1,method='default')
           descr = descr.ravel()
-          hist,_ = np.histogram(descr,bins=np.arange(255),density=True)
+          hist,_ = np.histogram(descr,bins=np.arange(256),density=True)
           descr = hist                         
       return descr

@@ -7,9 +7,8 @@ import matplotlib.pyplot as plt
 from skimage import exposure
 from file_loader import FileLoader
 import dlib 
-from sklearn.decomposition import PCA
-from mpl_toolkits.mplot3d import Axes3D
-from feature import getDescriptor
+from sklearn.manifold import TSNE
+from feature import getDescriptor,pre_process
 from util import middleRects
 
 class Knn(FileLoader):
@@ -55,7 +54,7 @@ class Knn(FileLoader):
         print('saving knn to file')  
     
   
-    def processAndPredict(self,sample , k = 3):
+    def processAndPredict(self,sample , k = 6):
         descriptor = getDescriptor(sample,self.shape)  
         return self.knn.findNearest(np.array([descriptor],dtype=np.float32), k)
     def pyrDown(self,img,levels=1):
@@ -224,9 +223,9 @@ def chart_data():
     loader = FileLoader(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
     loader.load_files()
     seed = 11
-    pca = PCA(n_components=3,random_state=seed)
+    tsne = TSNE(n_components=2,random_state=seed)
     fig = plt.figure()
-    ax = fig.add_subplot(111,projection='3d')
+    ax = fig.add_subplot(111)
     colors = ['b','g','r'] #3 classes
     all_features = []
     all_labels = []
@@ -258,8 +257,8 @@ def chart_data():
 
     for label,label_name in zip(np.unique(all_labels),np.unique(all_class_names)):
       features = all_features[ all_labels==label ,:]
-      transformed = pca.fit_transform(features)
-      ax.scatter(xs=transformed[:,0],ys=transformed[:,1],zs=transformed[:,2],c=colors[label],label=label_name)
+      transformed = tsne.fit_transform(features)
+      ax.scatter(x=transformed[:,0],y=transformed[:,1],c=colors[label],label=label_name)
     plt.title('captures dataset')
     ax.legend(loc='best')
     plt.show()
@@ -278,9 +277,20 @@ def main():
       show_std() 
     elif v=='5':
         chart_data()
+    else:
+      img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\236.jpg') 
+      img2 = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures\leite_lata\290.jpg')    
+      img = pre_process(img)
+      img2= pre_process(img2)
+      print(img.shape)
+      while 1:
+        k = cv2.waitKey(0)
+        if k ==ord('q'):
+          break 
+        cv2.imshow('1',img)  
+        cv2.imshow('2',img2)  
         
 
 if __name__ == '__main__':
-    img = cv2.imread(r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\testes_captures\2.jpg')
     main()
  
