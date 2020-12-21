@@ -29,7 +29,6 @@ def gamma_correction(img,gamma = 0.5):
 def pre_process(sample,expected_shape=(128,64),gamma=0.5):
     sampleToPredict = sample
     if len(sampleToPredict.shape)>2:
-      sampleToPredict = remove_ilumination(sampleToPredict)
       sampleToPredict = cv2.cvtColor(sampleToPredict,cv2.COLOR_BGR2GRAY)  
     if sampleToPredict.shape != expected_shape:
         reversedShape = expected_shape[::-1]
