@@ -39,6 +39,11 @@ def pre_process(sample,expected_shape=(128,64),gamma=0.5):
     sampleToPredict = cv2.equalizeHist(sampleToPredict)
     return sampleToPredict
 
+def hot_encode_vect(size,label):
+    arr = np.zeros(shape=(size))
+    arr[label]=1
+    return arr
+
 def getDescriptor(sample,expected_shape=(128,64) ,descr_open_cv=False,name='LBPH'):
       sampleToPredict = pre_process(sample,expected_shape)
       descr = None

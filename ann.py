@@ -1,17 +1,19 @@
 import cv2
 import numpy as np
 import os
+from file_loader import FileLoader
+from feature import getDescriptor,hot_encode_vect
 
-class TraineerAnn:
+class MyAnn:
 
-   def __init__(self):
+   def __init__(self,input_layer_size=2,output_layer_size=2,hidden_nodes_size=2,epochs=1):
       self.ann_fname = './anns/my_ann222.xml'
       self.training_data = []
       self.training_labels = []
-      self.hidden_nodes_size = 2
-      self.epochs=1
-      self.input_layer_size = 2
-      self.output_layer_size = 2
+      self.hidden_nodes_size = hidden_nodes_size
+      self.epochs=epochs
+      self.input_layer_size = input_layer_size
+      self.output_layer_size = output_layer_size
       self.loaded = False
       if(os.path.exists(self.ann_fname)):
         self.ann = cv2.ml.ANN_MLP_load(self.ann_fname)
@@ -65,31 +67,23 @@ class TraineerAnn:
 
    
 if __name__ == '__main__':
-    ann = TraineerAnn() 
-    ann.epochs = 1000
-    x = [[0,255],[255,0],[0,255],[0,255]]
-    y = [[1,0],[0,1],[1,0],[1,0]]
-    ann.fit(x=x,y=y)
+    loader = FileLoader(dir_to_walk=r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
+    loader.load_files()
+    x = []
+    y = []
+    for row in loader.files: 
+       for fname in row['imgs_per_class']:
+          img = cv2.imread(fname)
+          descr = getDescriptor(img) 
+          x.append(descr)
+          y.append( hot_encode_vect(len(loader.files),row['index']) )
+    x = np.array(x) 
+    y = np.array(y)
+    print(x.shape)
+    print(y.shape)   
+    #ann = MyAnn() 
+    #ann.epochs = 1000
+    
     
 
-    test = x
-    expected = [np.argmax(z) for z in y]
-    for sample,target in zip(test,expected): 
-       label,propab = ann.predict(sample)
-       if label != target:
-         print(propab)
-         print(sample) 
-         print(label)
-         print(target)
-         print('...')
-    print('ok')    
-    ''' 
-    for i in range(10): 
-      try:
-       w = ann.ann.getWeights(i)
-       print(w)
-      except:
-         break
-    print(ann.ann.getLayerSizes())  
-    '''
        
