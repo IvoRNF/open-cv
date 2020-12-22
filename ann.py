@@ -6,8 +6,8 @@ from feature import getDescriptor,hot_encode_vect
 
 class MyAnn:
 
-   def __init__(self,input_layer_size=2,output_layer_size=2,hidden_nodes_size=2,epochs=1):
-      self.ann_fname = './anns/my_ann222.xml'
+   def __init__(self,input_layer_size=2,output_layer_size=2,hidden_nodes_size=2,epochs=1,ann_fname='./anns/ann.xml'):
+      self.ann_fname = ann_fname
       self.training_data = []
       self.training_labels = []
       self.hidden_nodes_size = hidden_nodes_size
@@ -37,12 +37,6 @@ class MyAnn:
    
    def predict(self,sample : np.ndarray):
       return self.ann.predict(np.array([sample],dtype=np.float32))
-   def vect_class_idx(self,class_idx):
-      arr = []
-      for _ in range(self.output_layer_size):
-         arr.append(0)
-      arr[class_idx] = class_idx   
-      return arr  
          
    def train(self):
        train_labels = np.array(self.training_labels,dtype=np.float32)
@@ -71,19 +65,43 @@ if __name__ == '__main__':
     loader.load_files()
     x = []
     y = []
+    x_test = []
+    y_test = []
     for row in loader.files: 
        for fname in row['imgs_per_class']:
           img = cv2.imread(fname)
           descr = getDescriptor(img) 
           x.append(descr)
           y.append( hot_encode_vect(len(loader.files),row['index']) )
+    for row in loader.files_test: 
+       for fname in row['imgs_per_class']:
+          img = cv2.imread(fname)
+          descr = getDescriptor(img) 
+          x_test.append(descr)
+          y_test.append( hot_encode_vect(len(loader.files_test),row['index']) )      
     x = np.array(x) 
     y = np.array(y)
-    print(x.shape)
-    print(y.shape)   
-    #ann = MyAnn() 
-    #ann.epochs = 1000
+    x_test = np.array(x_test)
+    y_test = np.array(y_test)
     
+    print('descriptors loaded.') 
     
+    ann = MyAnn(input_layer_size=x.shape[1],hidden_nodes_size=x.shape[1]//2,output_layer_size=3,
+                epochs=1000,ann_fname='./anns/my_ann33.xml') 
+    ann.fit(x=x,y=y)
+    
+    print('finished train or load.')
+    print('evaluating')
 
-       
+    corrects=0   
+    for i in np.arange(x_test.shape[0]):
+        x = x_test[i]
+        y = np.argmax(y_test[i])
+        p,stats  = ann.predict(x)
+        p = int(p)
+        y = int(y)
+        stats = np.squeeze(stats)
+        print('%s predicted as %s with %.2f' % (loader.class_names[y],loader.class_names[p],stats[p]))
+        if p==y:
+           corrects +=1
+    print('acc %.2f%s' % ( (corrects/x_test.shape[0]) * 100,'%' ))
