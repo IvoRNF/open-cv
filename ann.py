@@ -3,6 +3,7 @@ import numpy as np
 import os
 from file_loader import FileLoader
 from feature import getDescriptor,hot_encode_vect
+from util import middleRects
 
 class MyAnn:
 
@@ -57,16 +58,59 @@ class MyAnn:
        self.ann.save(self.ann_fname)                   
        print('train complete')    
 
- 
+def realtime_teste():
+   ann = MyAnn(input_layer_size=256,hidden_nodes_size=256//2,output_layer_size=3,
+                epochs=1000,ann_fname='./anns/my_ann33.xml')
+   class_names = ['fermento', 'leite_caixa', 'leite_lata']             
+   capture = cv2.VideoCapture(0)
+   success,frame = capture.read()
+   center_pt = (frame.shape[1]//2,frame.shape[0]//2)
+   x_center,y_center = center_pt
+   curr_rect = None
+   i = 0
+   for curr_rect in middleRects(frame.shape,center_x=x_center,center_y=y_center):
+      if i == 2:
+        break
+      i+=1
 
-   
-if __name__ == '__main__':
+   while (success):
+      frame_cpy = frame.copy() 
+      cv2.circle(frame_cpy,(x_center,y_center),10,(0,255,255),1)      
+      k = cv2.waitKey(5)
+      if k == ord('q'):
+          break
+      success,frame = capture.read()
+      x,y,w,h = curr_rect
+      cv2.rectangle(frame_cpy,(x,y),(x+w,y+h),(0,255,0),2)
+      roi = frame[y:y+h,x:x+w]
+      descr = getDescriptor(roi)
+      _,stats = ann.predict(descr)
+      stats = np.squeeze(stats)
+
+      txt = ('label %s with %.2f' % (class_names[0],stats[0]))
+      cv2.putText(frame_cpy,txt,(25,25),cv2.FONT_HERSHEY_COMPLEX,1,(255,0,0),1)
+      
+      txt = ('label %s with %.2f' % (class_names[1],stats[1]))
+      cv2.putText(frame_cpy,txt,(25,50),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),1)
+      
+      txt = ('label %s with %.2f' % (class_names[2],stats[2]))
+      cv2.putText(frame_cpy,txt,(25,75),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),1)
+
+      txt = 'soma %.2f' % (np.sum(stats))
+      cv2.putText(frame_cpy,txt,(25,100),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,255),1)
+      
+      cv2.imshow('',frame_cpy)  
+   capture.release()   
+   cv2.destroyAllWindows()  
+
+def evaluate_model():
     loader = FileLoader(dir_to_walk=r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
     loader.load_files()
     x = []
     y = []
     x_test = []
     y_test = []
+    
     for row in loader.files: 
        for fname in row['imgs_per_class']:
           img = cv2.imread(fname)
@@ -85,7 +129,7 @@ if __name__ == '__main__':
     y_test = np.array(y_test)
     
     print('descriptors loaded.') 
-    
+    print(loader.class_names)
     ann = MyAnn(input_layer_size=x.shape[1],hidden_nodes_size=x.shape[1]//2,output_layer_size=3,
                 epochs=1000,ann_fname='./anns/my_ann33.xml') 
     ann.fit(x=x,y=y)
@@ -105,3 +149,13 @@ if __name__ == '__main__':
         if p==y:
            corrects +=1
     print('acc %.2f%s' % ( (corrects/x_test.shape[0]) * 100,'%' ))
+   
+if __name__ == '__main__':
+   print('1 para evaluate\n2 para realtime teste')
+   v = input()
+   if v=='1':
+      evaluate_model()
+   elif v=='2':
+      realtime_teste()   
+
+    
