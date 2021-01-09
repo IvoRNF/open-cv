@@ -5,9 +5,10 @@ from file_loader import FileLoader
 from feature import getDescriptor,hot_encode_vect
 from util import middleRects
 
+model_fname = './anns/my_ann43.xml'
 class MyAnn:
 
-   def __init__(self,input_layer_size=2,output_layer_size=2,hidden_nodes_size=2,epochs=1,ann_fname='./anns/ann.xml'):
+   def __init__(self,input_layer_size=2,output_layer_size=2,hidden_nodes_size=[2],epochs=1,ann_fname='./anns/ann.xml'):
       self.ann_fname = ann_fname
       self.training_data = []
       self.training_labels = []
@@ -24,10 +25,10 @@ class MyAnn:
          self.createAnn()
    def createAnn(self):
       self.ann = cv2.ml.ANN_MLP_create()
-      self.ann.setLayerSizes(np.array([self.input_layer_size,self.hidden_nodes_size,self.output_layer_size]))
+      self.ann.setLayerSizes(np.array([self.input_layer_size,*self.hidden_nodes_size,self.output_layer_size]))
       self.ann.setActivationFunction(cv2.ml.ANN_MLP_BACKPROP,0.1,0.1)
       #self.ann.setTrainMethod(cv2.ml.ANN_MLP_RPROP)
-      self.ann.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM)
+      #self.ann.setActivationFunction(cv2.ml.ANN_MLP_SIGMOID_SYM)
       self.ann.setTermCriteria((cv2.TERM_CRITERIA_MAX_ITER | cv2.TERM_CRITERIA_EPS,100,1.0))
    def fit(self,x,y):
       self.training_labels = y 
@@ -59,8 +60,9 @@ class MyAnn:
        print('train complete')    
 
 def realtime_teste():
-   ann = MyAnn(input_layer_size=256,hidden_nodes_size=256//2,output_layer_size=3,
-                epochs=1000,ann_fname='./anns/my_ann33.xml')
+   global model_fname
+   ann = MyAnn(input_layer_size=256,hidden_nodes_size=[256//4],output_layer_size=3,
+                epochs=1000,ann_fname=model_fname)
    class_names = ['fermento', 'leite_caixa', 'leite_lata']             
    capture = cv2.VideoCapture(0)
    success,frame = capture.read()
@@ -104,6 +106,7 @@ def realtime_teste():
    cv2.destroyAllWindows()  
 
 def evaluate_model():
+    global model_fname
     loader = FileLoader(dir_to_walk=r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
     loader.load_files()
     x = []
@@ -130,8 +133,8 @@ def evaluate_model():
     
     print('descriptors loaded.') 
     print(loader.class_names)
-    ann = MyAnn(input_layer_size=x.shape[1],hidden_nodes_size=x.shape[1]//2,output_layer_size=3,
-                epochs=1000,ann_fname='./anns/my_ann33.xml') 
+    ann = MyAnn(input_layer_size=x.shape[1],hidden_nodes_size=[x.shape[1]//4],output_layer_size=3,
+                epochs=1000,ann_fname=model_fname) 
     ann.fit(x=x,y=y)
     
     print('finished train or load.')
@@ -146,6 +149,7 @@ def evaluate_model():
         y = int(y)
         stats = np.squeeze(stats)
         print('%s predicted as %s with %.2f' % (loader.class_names[y],loader.class_names[p],stats[p]))
+        print(stats)
         if p==y:
            corrects +=1
     print('acc %.2f%s' % ( (corrects/x_test.shape[0]) * 100,'%' ))
