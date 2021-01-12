@@ -18,7 +18,7 @@ class MyNNPyTorch(nn.Module):
         self.conv2 = nn.Conv2d(in_channels=20,out_channels=50,kernel_size=5,stride=1)
         self.lin_in_feat = 50 * 29 * 13
         self.fc1 = nn.Linear(in_features=self.lin_in_feat,out_features=500)
-        self.fc2 = nn.Linear(in_features=500,out_features=3)    
+        self.fc2 = nn.Linear(in_features=500,out_features=len(self.class_names))    
 
     def forward(self,x):
         x = nnfunc.relu(self.conv1(x))
