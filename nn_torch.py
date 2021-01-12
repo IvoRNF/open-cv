@@ -16,11 +16,17 @@ class MyNNPyTorch(nn.Module):
         self.load_data()
         self.conv1 = nn.Conv2d(in_channels=1,out_channels=20,kernel_size=5,stride=1)
         self.conv2 = nn.Conv2d(in_channels=20,out_channels=50,kernel_size=5,stride=1)
-        self.fc1 = nn.Linear(in_features=0,out_features=500)
-        self.fc2 = nn.Linear(in_features=500,out_features=10)    
+        #self.fc1 = nn.Linear(in_features=0,out_features=500)
+        #self.fc2 = nn.Linear(in_features=500,out_features=10)    
 
     def forward(self,x):
-        pass  
+        x = nnfunc.relu(self.conv1(x))
+        x = nnfunc.max_pool2d(x,2,2)
+        x = nnfunc.relu(self.conv2(x))
+        x = nnfunc.max_pool2d(x,2,2)
+        print(x.size())
+        
+        
     def load_data(self):
         loader = FileLoader(dir_to_walk=r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
         loader.load_files()
@@ -49,4 +55,11 @@ class MyNNPyTorch(nn.Module):
                  y_data = torch.cat((y_data,torch.tensor([row['index']])),0)
         return (x_data,y_data)             
 if __name__=='__main__':
-    MyNNPyTorch()
+    my_nn = MyNNPyTorch()
+    for x,y in my_nn.train_dl:
+        #inp = x[0][0].numpy()
+        #print(inp.shape)
+        out = my_nn(x)
+        #print(out)  
+        break 
+    print('ok')
