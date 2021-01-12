@@ -16,15 +16,19 @@ class MyNNPyTorch(nn.Module):
         self.load_data()
         self.conv1 = nn.Conv2d(in_channels=1,out_channels=20,kernel_size=5,stride=1)
         self.conv2 = nn.Conv2d(in_channels=20,out_channels=50,kernel_size=5,stride=1)
-        #self.fc1 = nn.Linear(in_features=0,out_features=500)
-        #self.fc2 = nn.Linear(in_features=500,out_features=10)    
+        self.lin_in_feat = 50 * 29 * 13
+        self.fc1 = nn.Linear(in_features=self.lin_in_feat,out_features=500)
+        self.fc2 = nn.Linear(in_features=500,out_features=3)    
 
     def forward(self,x):
         x = nnfunc.relu(self.conv1(x))
         x = nnfunc.max_pool2d(x,2,2)
         x = nnfunc.relu(self.conv2(x))
         x = nnfunc.max_pool2d(x,2,2)
-        print(x.size())
+        x = x.view(-1,self.lin_in_feat)
+        x = nnfunc.relu(self.fc1(x))
+        x = self.fc2(x)
+        return nnfunc.log_softmax(x,dim=1)
         
         
     def load_data(self):
@@ -60,6 +64,6 @@ if __name__=='__main__':
         #inp = x[0][0].numpy()
         #print(inp.shape)
         out = my_nn(x)
-        #print(out)  
+        print(out)  
         break 
     print('ok')
