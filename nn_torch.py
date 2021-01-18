@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader
-from feature import pre_process,hot_encode_vect
+from feature import pre_process
 from torchvision import transforms
 import torch.nn.functional as nnfunc
 from torch import nn,optim
