@@ -45,8 +45,8 @@ class MyNNPyTorch(nn.Module):
         batch_size = 6
         self.train_dl = DataLoader(self.train_ds,batch_size=batch_size)
         self.val_dl = DataLoader(self.val_ds,batch_size=batch_size)
-    def train_epochs(self,epochs=50):
-        for _ in np.arange(epochs):
+    def train_epochs(self,epochs=5):
+        for epoch in np.arange(epochs):
             self.train()
             for xb,yb in self.train_dl:
                 out = self(xb)
@@ -54,6 +54,7 @@ class MyNNPyTorch(nn.Module):
                 loss.backward() #compute the gradients
                 self.opt.step() #update the weights
                 self.opt.zero_grad() #clear the gradients of batch
+                print('training epoch %d,loss %.2f' % (epoch,loss.item()))    
           
     def convert_files_to_tensors(self,files):
         x_data = torch.tensor(())
@@ -72,13 +73,6 @@ class MyNNPyTorch(nn.Module):
         return (x_data,y_data)             
 if __name__=='__main__':
     my_nn = MyNNPyTorch()
-    for x,y in my_nn.train_dl:        
-        out = my_nn(x)
-        print(out.shape)
-        print(y.shape)
-        print(y.dtype)
-        print(out.dtype)
-        loss = my_nn.get_loss(out,y)
-        print(loss)  
-        break 
+    print('start train')
+    my_nn.train_epochs()
     print('ok')
