@@ -4,10 +4,10 @@ import cv2
 import numpy as np
 from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader
-from feature import pre_process
+from feature import pre_process,hot_encode_vect
 from torchvision import transforms
 import torch.nn.functional as nnfunc
-from torch import nn
+from torch import nn,optim
 
 class MyNNPyTorch(nn.Module):
 
@@ -19,7 +19,7 @@ class MyNNPyTorch(nn.Module):
         self.lin_in_feat = 50 * 29 * 13
         self.fc1 = nn.Linear(in_features=self.lin_in_feat,out_features=500)
         self.fc2 = nn.Linear(in_features=500,out_features=len(self.class_names))    
-
+        self.loss_func = nn.NLLLoss(reduction='sum') 
     def forward(self,x):
         x = nnfunc.relu(self.conv1(x))
         x = nnfunc.max_pool2d(x,2,2)
@@ -30,7 +30,9 @@ class MyNNPyTorch(nn.Module):
         x = self.fc2(x)
         return nnfunc.log_softmax(x,dim=1)
         
-        
+    def get_loss(self,predicted,expected):
+        return self.loss_func(predicted,expected)
+
     def load_data(self):
         loader = FileLoader(dir_to_walk=r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
         loader.load_files()
@@ -45,7 +47,7 @@ class MyNNPyTorch(nn.Module):
           
     def convert_files_to_tensors(self,files):
         x_data = torch.tensor(())
-        y_data = torch.tensor(())
+        y_data = torch.tensor((),dtype=torch.int64)
         transformer = transforms.Compose([
             transforms.ToTensor()
         ])
@@ -55,15 +57,18 @@ class MyNNPyTorch(nn.Module):
                  img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
                  img = pre_process(img)
                  img = transformer(img)
-                 x_data = torch.cat((x_data,img.unsqueeze(dim=1)),0)
-                 y_data = torch.cat((y_data,torch.tensor([row['index']])),0)
+                 x_data = torch.cat((x_data,img.unsqueeze(dim=1)),0)            
+                 y_data = torch.cat((y_data,torch.tensor([row['index']],dtype=torch.int64)),0)
         return (x_data,y_data)             
 if __name__=='__main__':
     my_nn = MyNNPyTorch()
-    for x,y in my_nn.train_dl:
-        #inp = x[0][0].numpy()
-        #print(inp.shape)
+    for x,y in my_nn.train_dl:        
         out = my_nn(x)
-        print(out)  
+        print(out.shape)
+        print(y.shape)
+        print(y.dtype)
+        print(out.dtype)
+        loss = my_nn.get_loss(out,y)
+        print(loss)  
         break 
     print('ok')
