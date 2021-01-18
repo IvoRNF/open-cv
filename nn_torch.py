@@ -20,6 +20,7 @@ class MyNNPyTorch(nn.Module):
         self.fc1 = nn.Linear(in_features=self.lin_in_feat,out_features=500)
         self.fc2 = nn.Linear(in_features=500,out_features=len(self.class_names))    
         self.loss_func = nn.NLLLoss(reduction='sum') 
+        self.opt = optim.Adam(self.parameters(),lr=1e-4)
     def forward(self,x):
         x = nnfunc.relu(self.conv1(x))
         x = nnfunc.max_pool2d(x,2,2)
@@ -44,6 +45,15 @@ class MyNNPyTorch(nn.Module):
         batch_size = 6
         self.train_dl = DataLoader(self.train_ds,batch_size=batch_size)
         self.val_dl = DataLoader(self.val_ds,batch_size=batch_size)
+    def train_epochs(self,epochs=50):
+        for _ in np.arange(epochs):
+            self.train()
+            for xb,yb in self.train_dl:
+                out = self(xb)
+                loss = self.get_loss(out,yb)
+                loss.backward() #compute the gradients
+                self.opt.step() #update the weights
+                self.opt.zero_grad() #clear the gradients of batch
           
     def convert_files_to_tensors(self,files):
         x_data = torch.tensor(())
