@@ -72,7 +72,7 @@ class MyNNPyTorch(nn.Module):
         self.val_dl = DataLoader(self.val_ds,batch_size=self.batch_size)
         print('files loaded.')
         return (self.train_dl,self.val_dl)
-    def train_epochs(self,epochs=20):
+    def train_epochs(self,epochs=7):
         for epoch in np.arange(epochs):
             self.train()
             for xb,yb in self.train_dl:
