@@ -19,8 +19,7 @@ class MyNNPyTorch(nn.Module):
         self.val_dl = None
         self.batch_size = 6
         self.modelfname = r'C:\Users\Ivo Ribeiro\Documents\open-cv\anns\torch_model.pt'
-        self.imgs_foldername = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
-        self.try_load_weights()
+        self.imgs_foldername = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'   
         self.class_names = self.load_class_names(self.imgs_foldername)
         if training:
            self.load_data()
@@ -31,7 +30,7 @@ class MyNNPyTorch(nn.Module):
         self.fc2 = nn.Linear(in_features=500,out_features=len(self.class_names))    
         self.loss_func = nn.NLLLoss(reduction='sum') 
         self.opt = optim.Adam(self.parameters(),lr=1e-4)
-        
+        self.try_load_weights()
     def forward(self,x):
         x = nnfunc.relu(self.conv1(x))
         x = nnfunc.max_pool2d(x,2,2)
@@ -52,7 +51,7 @@ class MyNNPyTorch(nn.Module):
 
     def try_load_weights(self):
         if os.path.exists(self.modelfname):
-           self.load_state_dict( torch.load(self.modelfname),strict=False ) 
+           self.load_state_dict(torch.load(self.modelfname)) 
            print('loaded model from file %s' % (self.modelfname))
 
     def load_data(self):
@@ -72,7 +71,7 @@ class MyNNPyTorch(nn.Module):
         self.val_dl = DataLoader(self.val_ds,batch_size=self.batch_size)
         print('files loaded.')
         return (self.train_dl,self.val_dl)
-    def train_epochs(self,epochs=7):
+    def train_epochs(self,epochs=20):
         for epoch in np.arange(epochs):
             self.train()
             for xb,yb in self.train_dl:
