@@ -8,12 +8,22 @@ from feature import pre_process
 from torchvision import transforms
 import torch.nn.functional as nnfunc
 from torch import nn,optim
+import os
 
 class MyNNPyTorch(nn.Module):
 
-    def __init__(self): 
+    def __init__(self,training=False): 
         super().__init__()
-        self.load_data()
+        self.training = training
+        self.train_dl = None
+        self.val_dl = None
+        self.batch_size = 6
+        self.modelfname = r'C:\Users\Ivo Ribeiro\Documents\open-cv\anns\torch_model.pt'
+        self.imgs_foldername = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'
+        self.try_load_weights()
+        self.class_names = self.load_class_names(self.imgs_foldername)
+        if training:
+           self.load_data()
         self.conv1 = nn.Conv2d(in_channels=1,out_channels=20,kernel_size=5,stride=1)
         self.conv2 = nn.Conv2d(in_channels=20,out_channels=50,kernel_size=5,stride=1)
         self.lin_in_feat = 50 * 29 * 13
@@ -21,6 +31,7 @@ class MyNNPyTorch(nn.Module):
         self.fc2 = nn.Linear(in_features=500,out_features=len(self.class_names))    
         self.loss_func = nn.NLLLoss(reduction='sum') 
         self.opt = optim.Adam(self.parameters(),lr=1e-4)
+        
     def forward(self,x):
         x = nnfunc.relu(self.conv1(x))
         x = nnfunc.max_pool2d(x,2,2)
@@ -34,18 +45,34 @@ class MyNNPyTorch(nn.Module):
     def get_loss(self,predicted,expected):
         return self.loss_func(predicted,expected)
 
+    def load_class_names(self,folder_base):
+        fnames = os.listdir(folder_base)
+        dir_names = [fname for fname in fnames if os.path.isdir(os.path.join(folder_base,fname))]
+        return dir_names   
+
+    def try_load_weights(self):
+        if os.path.exists(self.modelfname):
+           self.load_state_dict( torch.load(self.modelfname),strict=False ) 
+           print('loaded model from file %s' % (self.modelfname))
+
     def load_data(self):
-        loader = FileLoader(dir_to_walk=r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures')
+        if self.val_dl is not None: 
+            return (self.train_dl,self.val_dl)
+        
+        print('loading files...')
+        loader = FileLoader(dir_to_walk=self.imgs_foldername)
         loader.load_files()
-        self.class_names = loader.class_names
-        x_data,y_data = self.convert_files_to_tensors(loader.files)
+        self.train_dl = None
+        if self.training:
+           x_data,y_data = self.convert_files_to_tensors(loader.files)
+           self.train_ds = TensorDataset(x_data,y_data)         
+           self.train_dl = DataLoader(self.train_ds,batch_size=self.batch_size)
         x_val,y_val = self.convert_files_to_tensors(loader.files_test)
-        self.train_ds = TensorDataset(x_data,y_data)
         self.val_ds = TensorDataset(x_val,y_val)
-        batch_size = 6
-        self.train_dl = DataLoader(self.train_ds,batch_size=batch_size)
-        self.val_dl = DataLoader(self.val_ds,batch_size=batch_size)
-    def train_epochs(self,epochs=5):
+        self.val_dl = DataLoader(self.val_ds,batch_size=self.batch_size)
+        print('files loaded.')
+        return (self.train_dl,self.val_dl)
+    def train_epochs(self,epochs=7):
         for epoch in np.arange(epochs):
             self.train()
             for xb,yb in self.train_dl:
@@ -54,8 +81,10 @@ class MyNNPyTorch(nn.Module):
                 loss.backward() #compute the gradients
                 self.opt.step() #update the weights
                 self.opt.zero_grad() #clear the gradients of batch
-                print('training epoch %d,loss %.2f' % (epoch,loss.item()))    
-          
+                print('training epoch %d,loss %.2f' % (epoch,loss.item())) 
+        print('saving the model...')  
+        torch.save(self.state_dict(),self.modelfname)         
+        print('saved.')  
     def convert_files_to_tensors(self,files):
         x_data = torch.tensor(())
         y_data = torch.tensor((),dtype=torch.int64)
@@ -70,9 +99,35 @@ class MyNNPyTorch(nn.Module):
                  img = transformer(img)
                  x_data = torch.cat((x_data,img.unsqueeze(dim=1)),0)            
                  y_data = torch.cat((y_data,torch.tensor([row['index']],dtype=torch.int64)),0)
-        return (x_data,y_data)             
+        return (x_data,y_data) 
+    def evaluate_model(self):
+        self.eval()
+        _,val_dl = self.load_data()
+        acc = 0
+        for xb,yb in val_dl:
+            with torch.no_grad():
+                out = self(xb)
+                out = out.numpy()
+                out = np.argmax(out,axis=1)
+                ybnp = yb.numpy()
+                for j in np.arange(ybnp.shape[0]):
+                    if ybnp[j]==out[j]:
+                        acc += 1     
+        sz = len(val_dl) * self.batch_size                 
+        print('evaluation results , val(%.2f) acc %.2f' % (sz,(acc/sz)))    
+                 
+def evaluate_model():
+    my_nn = MyNNPyTorch(training=False)
+    my_nn.evaluate_model()
 if __name__=='__main__':
-    my_nn = MyNNPyTorch()
-    print('start train')
-    my_nn.train_epochs()
-    print('ok')
+
+    print('1 - train and evaluate\n2 - load and evaluate')
+    v = input()
+    if v=='1':
+        my_nn = MyNNPyTorch(training=True)
+        print('start train')
+        my_nn.train_epochs()
+        my_nn.evaluate_model()
+        print('ok')
+    elif v=='2':   
+        evaluate_model()
