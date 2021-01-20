@@ -17,6 +17,7 @@ class MyNNPyTorch(nn.Module):
         self.training = training
         self.train_dl = None
         self.val_dl = None
+        self.normalize = False
         self.batch_size = 6
         self.modelfname = r'C:\Users\Ivo Ribeiro\Documents\open-cv\anns\torch_model.pt'
         self.imgs_foldername = r'C:\Users\Ivo Ribeiro\Documents\open-cv\datasets\captures'   
@@ -71,7 +72,7 @@ class MyNNPyTorch(nn.Module):
         self.val_dl = DataLoader(self.val_ds,batch_size=self.batch_size)
         print('files loaded.')
         return (self.train_dl,self.val_dl)
-    def train_epochs(self,epochs=12):
+    def train_epochs(self,epochs=7):
         for epoch in np.arange(epochs):
             self.train()
             for xb,yb in self.train_dl:
@@ -84,20 +85,42 @@ class MyNNPyTorch(nn.Module):
         print('saving the model...')  
         torch.save(self.state_dict(),self.modelfname)         
         print('saved.')  
+    
+    
+    def get_mean_std(self,imgs):
+        means = np.zeros(shape=(imgs.shape[0]))  
+        stds =  np.zeros(shape=(imgs.shape[0]))
+        for i in np.arange(imgs.shape[0]):
+           img = imgs[i]
+           m = np.mean(img,axis=(0,1))
+           std = np.std(img,axis=(0,1))
+           means[i] = m    
+           stds[i] = std
+        my_mean = np.mean(means)
+        my_std = np.std(stds)
+        return (my_mean,my_std)
     def convert_files_to_tensors(self,files):
         x_data = torch.tensor(())
         y_data = torch.tensor((),dtype=torch.int64)
-        transformer = transforms.Compose([
-            transforms.ToTensor()
-        ])
+        lbls = []
+        imgs = []
         for row in files:
              dirs = row['imgs_per_class']
              for fname in dirs:
                  img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
                  img = pre_process(img)
-                 img = transformer(img)
-                 x_data = torch.cat((x_data,img.unsqueeze(dim=1)),0)            
-                 y_data = torch.cat((y_data,torch.tensor([row['index']],dtype=torch.int64)),0)
+                 imgs.append(img)
+                 lbls.append(row['index'])  
+        imgs = np.array(imgs)       
+        my_transforms = [transforms.ToTensor()]
+        if self.normalize: 
+           my_mean,my_std  = self.get_mean_std(imgs)
+           my_transforms.append(transforms.Normalize([my_mean],[my_std]))
+        transformer = transforms.Compose(my_transforms)         
+        for img,y in zip(imgs,lbls):          
+            x = transformer(img)
+            x_data = torch.cat((x_data,x.unsqueeze(dim=1)),0)            
+            y_data = torch.cat((y_data,torch.tensor([y],dtype=torch.int64)),0)
         return (x_data,y_data) 
     def evaluate_model(self):
         self.eval()
@@ -105,13 +128,13 @@ class MyNNPyTorch(nn.Module):
         acc = 0
         for xb,yb in val_dl:
             with torch.no_grad():
-                out = self(xb)
-                out = out.numpy()
-                out = np.argmax(out,axis=1)
+                predicted = self(xb)
+                predicted = predicted.numpy()
+                out = np.argmax(predicted,axis=1)
                 ybnp = yb.numpy()
                 for j in np.arange(ybnp.shape[0]):
                     if ybnp[j]==out[j]:
-                        acc += 1     
+                        acc += 1       
         sz = len(val_dl) * self.batch_size                 
         print('evaluation results , val(%.2f) acc %.2f' % (sz,(acc/sz)))    
                  
