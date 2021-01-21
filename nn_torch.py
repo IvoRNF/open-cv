@@ -4,7 +4,7 @@ import cv2
 import numpy as np
 from torch.utils.data import TensorDataset
 from torch.utils.data import DataLoader
-from feature import pre_process
+from feature import pre_process,hot_encode_vect
 from torchvision import transforms
 import torch.nn.functional as nnfunc
 from torch import nn,optim
@@ -29,8 +29,8 @@ class MyNNPyTorch(nn.Module):
         self.lin_in_feat = 50 * 29 * 13
         self.fc1 = nn.Linear(in_features=self.lin_in_feat,out_features=500)
         self.fc2 = nn.Linear(in_features=500,out_features=len(self.class_names))    
-        self.loss_func = nn.NLLLoss(reduction='sum') 
-        self.opt = optim.Adam(self.parameters(),lr=1e-4)
+        self.loss_func = nn.MSELoss(reduction='sum') 
+        self.opt = optim.SGD(self.parameters(),lr=1e-4)
         self.try_load_weights()
     def forward(self,x):
         x = nnfunc.relu(self.conv1(x))
@@ -40,7 +40,7 @@ class MyNNPyTorch(nn.Module):
         x = x.view(-1,self.lin_in_feat)
         x = nnfunc.relu(self.fc1(x))
         x = self.fc2(x)
-        return nnfunc.log_softmax(x,dim=1)
+        return nnfunc.softmax(x,dim=1)
         
     def get_loss(self,predicted,expected):
         return self.loss_func(predicted,expected)
@@ -72,7 +72,7 @@ class MyNNPyTorch(nn.Module):
         self.val_dl = DataLoader(self.val_ds,batch_size=self.batch_size)
         print('files loaded.')
         return (self.train_dl,self.val_dl)
-    def train_epochs(self,epochs=2):
+    def train_epochs(self,epochs=16):
         for epoch in np.arange(epochs):
             self.train()
             for xb,yb in self.train_dl:
@@ -102,7 +102,7 @@ class MyNNPyTorch(nn.Module):
         
     def convert_files_to_tensors(self,files):
         x_data = torch.tensor(())
-        y_data = torch.tensor((),dtype=torch.int64)
+        y_data = torch.tensor((),dtype=torch.float32)
         lbls = []
         imgs = []
         for row in files:
@@ -111,7 +111,7 @@ class MyNNPyTorch(nn.Module):
                  img = cv2.imread(fname,cv2.IMREAD_GRAYSCALE)
                  img = pre_process(img)
                  imgs.append(img)
-                 lbls.append(row['index'])  
+                 lbls.append(hot_encode_vect(len(self.class_names),row['index']))  
         imgs = np.array(imgs)   
         lbls = np.array(lbls) 
         nseed = 6 
@@ -127,7 +127,7 @@ class MyNNPyTorch(nn.Module):
         for img,y in zip(imgs,lbls):          
             x = transformer(img)
             x_data = torch.cat((x_data,x.unsqueeze(dim=1)),0)            
-            y_data = torch.cat((y_data,torch.tensor([y],dtype=torch.int64)),0)
+            y_data = torch.cat((y_data,torch.tensor([y],dtype=torch.float32)),0)
         return (x_data,y_data) 
     def evaluate_model(self):
         self.eval()
@@ -140,7 +140,10 @@ class MyNNPyTorch(nn.Module):
                 predicted = self(xb)
                 predicted = predicted.numpy()
                 out = np.argmax(predicted,axis=1)
+
                 ybnp = yb.numpy()
+                ybnp = np.argmax(ybnp,axis=1)
+                
                 for j in np.arange(ybnp.shape[0]):
                     if ybnp[j]==out[j]:
                         print('%d validating %s %s' % (out[j],self.class_names[out[j]],predicted[j]))
