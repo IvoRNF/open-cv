@@ -72,7 +72,7 @@ class MyNNPyTorch(nn.Module):
         self.val_dl = DataLoader(self.val_ds,batch_size=self.batch_size)
         print('files loaded.')
         return (self.train_dl,self.val_dl)
-    def train_epochs(self,epochs=7):
+    def train_epochs(self,epochs=3):
         for epoch in np.arange(epochs):
             self.train()
             for xb,yb in self.train_dl:
@@ -99,6 +99,7 @@ class MyNNPyTorch(nn.Module):
         my_mean = np.mean(means)
         my_std = np.std(stds)
         return (my_mean,my_std)
+        
     def convert_files_to_tensors(self,files):
         x_data = torch.tensor(())
         y_data = torch.tensor((),dtype=torch.int64)
@@ -111,7 +112,13 @@ class MyNNPyTorch(nn.Module):
                  img = pre_process(img)
                  imgs.append(img)
                  lbls.append(row['index'])  
-        imgs = np.array(imgs)       
+        imgs = np.array(imgs)   
+        lbls = np.array(lbls) 
+        nseed = 6 
+        np.random.seed(nseed)
+        np.random.shuffle(imgs)
+        np.random.seed(nseed)
+        np.random.shuffle(lbls)
         my_transforms = [transforms.ToTensor()]
         if self.normalize: 
            my_mean,my_std  = self.get_mean_std(imgs)
@@ -126,16 +133,18 @@ class MyNNPyTorch(nn.Module):
         self.eval()
         _,val_dl = self.load_data()
         acc = 0
+        sz = 0
         for xb,yb in val_dl:
             with torch.no_grad():
+                sz += xb.shape[0]
                 predicted = self(xb)
                 predicted = predicted.numpy()
                 out = np.argmax(predicted,axis=1)
                 ybnp = yb.numpy()
                 for j in np.arange(ybnp.shape[0]):
                     if ybnp[j]==out[j]:
-                        acc += 1       
-        sz = len(val_dl) * self.batch_size                 
+                        print('%d validating %s %s' % (out[j],self.class_names[out[j]],predicted[j]))
+                        acc += 1                       
         print('evaluation results , val(%.2f) acc %.2f' % (sz,(acc/sz)))    
                  
 def evaluate_model():
