@@ -14,7 +14,9 @@ class MyNeuralNetwork:
         self.logging = logging
         self.weights = []
         self.biases = []
-
+        self.activfunc_outputs = []
+        self.loaded = False
+     
 
     def log(self,msg=None):
         if not self.logging:
@@ -34,9 +36,6 @@ class MyNeuralNetwork:
             self.weights.append(weights_of_layer) 
             last_input_sz = neuron_count 
 
-    def softmax(self,inpt):
-        return np.exp(inpt)/np.sum( np.exp(inpt) )  
-
     def sigmoid(self,input_vl): 
         return 1.0/(1.0+np.exp(-1 * input_vl))  
 
@@ -47,6 +46,10 @@ class MyNeuralNetwork:
             b = self.biases[i]
             y = np.dot(y,w)  + b
             y = self.sigmoid(y)
+            if i < len(self.activfunc_outputs):
+               self.activfunc_outputs[i] = y 
+            else:
+               self.activfunc_outputs.append(y)     
         return y 
     def weights_flattened(self):
         result = []
@@ -90,17 +93,37 @@ class MyNeuralNetwork:
     def fitness_func(self,sol):   
         self.weights = self.weights_unflattened(sol)
         return self.eval_model()
-    def load(self):
+    def try_load(self):
+        modelf_exist = os.path.exists(self.model_f_name)
+        if not modelf_exist:
+           self.init_weights()
+           self.init_bias()      
+           return 
+        self.loaded = True   
         with open(self.model_f_name,'rb') as f:
            mapa = pickle.load(f)
            self.weights = self.weights_unflattened(mapa['weights'])
            self.biases = mapa['bias']
-        print('loaded model from file')  
+           print('loaded model from file')  
     def save(self):
         with open(self.model_f_name,'wb') as f:
-           mapa = {"weights":self.weights,"bias":self.biases} 
+           mapa = {"weights":self.weights_flattened(),"bias":self.biases} 
            pickle.dump(mapa,f)
         print('saved model to file %s' % (self.model_f_name))        
+    def train_ga(self):
+        flattened = self.weights_flattened()
+        initial_solutions = np.random.uniform(low=-1.0,high=1.0,size=(20,len(flattened)))
+        initial_solutions[0] = np.array(flattened,dtype=np.float64)
+        ga = GeneticAlgorithm(
+            solutions=initial_solutions, 
+            num_parents_for_mating=4,
+            generations=90,
+            fitness_func=self.fitness_func ,
+            offspring_sz=4
+        )
+        ga.start()
+    def train(self):    
+        pass
 
 
 if __name__ == '__main__':
@@ -111,30 +134,21 @@ if __name__ == '__main__':
     outpt_sz = 2
     x_train = [[0,0,255],[0,100,0],[0,0,255],[0,0,255],[0,255,0],[0,255,0],[0,255,0]]
     y_train = [0,1,0,0,1,1,1]
-        
-    if not os.path.exists(model_f_name):
+    print('1 - train and evaluate\n2 - load and evaluate') 
+    v = input()
+    if v=='1':
         print('training')
         nn = MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
         nn.fit(x_train,y_train)
-        nn.init_weights()
-        nn.init_bias()
-        flattened = nn.weights_flattened()
-        initial_solutions = np.random.uniform(low=-1.0,high=1.0,size=(20,len(flattened)))
-        initial_solutions[0] = np.array(flattened,dtype=np.float64)
-        ga = GeneticAlgorithm(
-            solutions=initial_solutions, 
-            num_parents_for_mating=4,
-            generations=90,
-            fitness_func=nn.fitness_func ,
-            offspring_sz=4
-        )
-        ga.start()
-        nn.weights = ga.solutions[0]
+        nn.try_load()
+        nn.train_ga()
         nn.save()
-    else:    
+        stats = nn.eval_model(ret_stats=True)
+        print(stats)
+    elif v=='2':    
         nn= MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
         nn.fit(x_train,y_train)
-        nn.load()   
+        nn.try_load()   
         print(nn.predict([0,0,255]))
         stats = nn.eval_model(ret_stats=True)
         print(stats)
