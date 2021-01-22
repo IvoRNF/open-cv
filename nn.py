@@ -110,14 +110,14 @@ class MyNeuralNetwork:
            mapa = {"weights":self.weights_flattened(),"bias":self.biases} 
            pickle.dump(mapa,f)
         print('saved model to file %s' % (self.model_f_name))        
-    def train_ga(self):
+    def train_ga(self,generations=90):
         flattened = self.weights_flattened()
         initial_solutions = np.random.uniform(low=-1.0,high=1.0,size=(20,len(flattened)))
         initial_solutions[0] = np.array(flattened,dtype=np.float64)
         ga = GeneticAlgorithm(
             solutions=initial_solutions, 
             num_parents_for_mating=4,
-            generations=90,
+            generations=generations,
             fitness_func=self.fitness_func ,
             offspring_sz=4
         )
@@ -141,7 +141,7 @@ if __name__ == '__main__':
         nn = MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
         nn.fit(x_train,y_train)
         nn.try_load()
-        nn.train_ga()
+        nn.train_ga(25)
         nn.save()
         stats = nn.eval_model(ret_stats=True)
         print(stats)
