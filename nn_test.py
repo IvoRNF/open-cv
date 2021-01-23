@@ -40,15 +40,21 @@ class MyNeuralNetwork:
     def mseLoss(self,y,output):
         return 0.5 * np.power(y - output,2)    
         
-    def forward(self,inpt):
+    def forward(self,inpt,doLog=False):
         y = inpt
         self.forward_activ_outs = []
+        oldDoLog = self.logging
+        self.logging = doLog
         for i in range(len(self.weights)):
             w = self.weights[i]
             b = self.biases[i]
+            self.log('%s %s'%('1.start forward',y))
             y = np.dot(y,w)  + b
+            self.log('%s %s'%('2.dot',y))
             y = self.sigmoid(y)    
+            self.log('%s %s'%('3.sigmoid',y))
             self.forward_activ_outs.append(y)
+        self.logging = oldDoLog
         return y 
     def weights_flattened(self):
         result = []
@@ -122,31 +128,37 @@ class MyNeuralNetwork:
         ga.start()
         self.weights =  self.weights_unflattened(ga.solutions[0]) #best solution
     
-    def der_last_layer(self,y,output,der_of_weight):
+    def der_of_last_layer(self,y,output,der_of_weight):
         err_out_der =  output - y 
-        out_outin_der = output * (1 - output) 
+        out_outin_der = 0.23 #output * (1 - output) ?
         return err_out_der * out_outin_der * der_of_weight
-    
+  
+    def der_of_middle_layer(self,x,y,output):
+        err_out_der =  output - y 
+        out_outin_der = 0.23 #output * (1 - output) ?
+        w6 = self.weights[2][1]
+        w3 = self.weights[1][0]
+        w4 = self.weights[1][1]
+        outin_h2out_der = w6
+        h2out_h2in_der = x[0] * w3 + x[1] * w4 + self.biases[1]
+        h2in_w4 = w4 
+        print('err_out_der %.4f out_outin_der %.4f outin_h2out_der %.4f h2out_h2in_der  %.4f h2in_w4 %.4f' % (err_out_der ,out_outin_der,outin_h2out_der,h2out_h2in_der,h2in_w4))
+        return err_out_der * out_outin_der * outin_h2out_der * h2out_h2in_der  * h2in_w4 
     
     def backward(self,x,y,output):
         #derivatives of sigmoid
                 
         h1out = nn.forward_activ_outs[0]
         outin_w5_der = h1out 
-        err_w5_der = self.der_last_layer(y,output,outin_w5_der)
-        
-
+        err_w5_der = self.der_of_last_layer(y,output,outin_w5_der)
         h2out = nn.forward_activ_outs[1][1]
         outin_w6_der = h2out 
-        err_w6_der = self.der_last_layer(y,output,outin_w6_der)
-          
-
-        #print('err_out_der %.2f,out_outin_der %.2f,outin_w5_der %.2f ' % (err_out_der,out_outin_der,outin_w5_der) )
-        
+        err_w6_der = self.der_of_last_layer(y,output,outin_w6_der)
+        err_w4_der = self.der_of_middle_layer(x,y,output)  
+        #print(self.weights)
         #print(nn.forward_activ_outs)
-        #print(err_w6_der)
-        print(len(weights))
-
+        print('err_w6_der %.4f outin_w5_der %.4f err_w4_der %.4f' % (err_w6_der,err_w5_der,err_w4_der))
+        
 if __name__ == '__main__':
 
     model_f_name = './datasets/my_nn78.pk'
@@ -168,7 +180,7 @@ if __name__ == '__main__':
                       np.array([-0.2,0.3]),   ]
         nn.biases =  np.array([0.4,-0.1,1.83])   
 
-        out = nn.forward(x_train[0])
+        out = nn.forward(x_train[0],doLog=False)
         print('out %.2f' % (out))
 
         err = nn.mseLoss(y_train[0],out)
