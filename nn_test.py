@@ -144,8 +144,8 @@ class MyNeuralNetwork:
         #print('err_out_der %.2f,out_outin_der %.2f,outin_w5_der %.2f ' % (err_out_der,out_outin_der,outin_w5_der) )
         
         #print(nn.forward_activ_outs)
-        print(err_w6_der)
-    
+        #print(err_w6_der)
+        print(len(weights))
 
 if __name__ == '__main__':
 
