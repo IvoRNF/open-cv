@@ -35,11 +35,6 @@ class MyNeuralNetwork:
 
     def sigmoid(self,input_vl): 
         return 1.0/(1.0+np.exp(-1 * input_vl))  
-
-    def sigmoid_derivative(self,s):
-        return s * (1-s)    
-
-    
         
     def forward(self,inpt):
         y = inpt
@@ -137,7 +132,7 @@ if __name__ == '__main__':
         nn = MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
         nn.fit(x_train,y_train)
         nn.try_load()
-        nn.train_ga(25)
+        nn.train_ga(45)
         stats = nn.eval_model(ret_stats=True)
         print(stats)
         print('Save model ? 1=Y,2=N')
