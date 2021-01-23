@@ -14,9 +14,6 @@ class MyNeuralNetwork:
         self.logging = logging
         self.weights = []
         self.biases = []
-        self.activfunc_outputs = []
-        self.loaded = False
-     
 
     def log(self,msg=None):
         if not self.logging:
@@ -39,17 +36,18 @@ class MyNeuralNetwork:
     def sigmoid(self,input_vl): 
         return 1.0/(1.0+np.exp(-1 * input_vl))  
 
-    def predict(self,inpt):
+    def sigmoid_derivative(self,s):
+        return s * (1-s)    
+
+    
+        
+    def forward(self,inpt):
         y = inpt
         for i in range(len(self.weights)):
             w = self.weights[i]
             b = self.biases[i]
             y = np.dot(y,w)  + b
-            y = self.sigmoid(y)
-            if i < len(self.activfunc_outputs):
-               self.activfunc_outputs[i] = y 
-            else:
-               self.activfunc_outputs.append(y)     
+            y = self.sigmoid(y)    
         return y 
     def weights_flattened(self):
         result = []
@@ -78,7 +76,7 @@ class MyNeuralNetwork:
         c_correct = []
         probs = []
         for x,y in zip(self.x_train,self.y_train): 
-            arr = self.predict(x)
+            arr = self.forward(x)
             label = np.argmax(arr)
             probs.append(arr)
             if(label == y):    
@@ -98,8 +96,7 @@ class MyNeuralNetwork:
         if not modelf_exist:
            self.init_weights()
            self.init_bias()      
-           return 
-        self.loaded = True   
+           return  
         with open(self.model_f_name,'rb') as f:
            mapa = pickle.load(f)
            self.weights = self.weights_unflattened(mapa['weights'])
@@ -122,18 +119,17 @@ class MyNeuralNetwork:
             offspring_sz=4
         )
         ga.start()
-    def train(self):    
-        pass
-
+        self.weights =  self.weights_unflattened(ga.solutions[0]) #best solution
+        
 
 if __name__ == '__main__':
 
     model_f_name = './datasets/my_nn77.pk'
-    inpt_sz = 3
+    inpt_sz = 2
     hidden_szs = [2]
     outpt_sz = 2
-    x_train = [[0,0,255],[0,100,0],[0,0,255],[0,0,255],[0,255,0],[0,255,0],[0,255,0]]
-    y_train = [0,1,0,0,1,1,1]
+    x_train = np.array([[0,255],[100,0],[0,255],[0,255],[255,0],[255,0],[255,0]])
+    y_train = np.array([0,1,0,0,1,1,1])
     print('1 - train and evaluate\n2 - load and evaluate') 
     v = input()
     if v=='1':
@@ -142,14 +138,17 @@ if __name__ == '__main__':
         nn.fit(x_train,y_train)
         nn.try_load()
         nn.train_ga(25)
-        nn.save()
         stats = nn.eval_model(ret_stats=True)
         print(stats)
+        print('Save model ? 1=Y,2=N')
+        v = input()
+        if v=='1':
+            nn.save()
     elif v=='2':    
         nn= MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
         nn.fit(x_train,y_train)
         nn.try_load()   
-        print(nn.predict([0,0,255]))
+        print(nn.forward(np.array([0,255])))
         stats = nn.eval_model(ret_stats=True)
         print(stats)
      
