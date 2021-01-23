@@ -142,7 +142,7 @@ class MyNeuralNetwork:
         outin_h2out_der = w6
         h2out_h2in_der = x[0] * w3 + x[1] * w4 + self.biases[1]
         h2in_w4 = w4 
-        print('err_out_der %.4f out_outin_der %.4f outin_h2out_der %.4f h2out_h2in_der  %.4f h2in_w4 %.4f' % (err_out_der ,out_outin_der,outin_h2out_der,h2out_h2in_der,h2in_w4))
+        #print('err_out_der %.4f out_outin_der %.4f outin_h2out_der %.4f h2out_h2in_der  %.4f h2in_w4 %.4f' % (err_out_der ,out_outin_der,outin_h2out_der,h2out_h2in_der,h2in_w4))
         return err_out_der * out_outin_der * outin_h2out_der * h2out_h2in_der  * h2in_w4 
     
     def backward(self,x,y,output):
