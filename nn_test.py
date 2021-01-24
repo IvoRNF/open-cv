@@ -133,18 +133,32 @@ class MyNeuralNetwork:
         out_outin_der = 0.23 #output * (1 - output) ?
         return err_out_der * out_outin_der * der_of_weight
   
-    def der_of_middle_layer(self,x,y,output):
+    def der_of_middle_layer(self,x,y,output,w):
         err_out_der =  output - y 
         out_outin_der = 0.23 #output * (1 - output) ?
         w6 = self.weights[2][1]
         w3 = self.weights[1][0]
         w4 = self.weights[1][1]
         outin_h2out_der = w6
-        h2out_h2in_der = x[0] * w3 + x[1] * w4 + self.biases[1]
-        h2in_w4 = w4 
+        h2out_h2in_der =  x[0] * w3 + x[1] * w4 + self.biases[1] 
+        h2in_w = w 
         #print('err_out_der %.4f out_outin_der %.4f outin_h2out_der %.4f h2out_h2in_der  %.4f h2in_w4 %.4f' % (err_out_der ,out_outin_der,outin_h2out_der,h2out_h2in_der,h2in_w4))
-        return err_out_der * out_outin_der * outin_h2out_der * h2out_h2in_der  * h2in_w4 
+        return err_out_der * out_outin_der * outin_h2out_der * h2out_h2in_der  * h2in_w
     
+    def der_of_first_weights(self,x,y,output,h1in_w_der):
+        err_out_der =  output - y 
+        out_outin_der = 0.23 #output * (1 - output) ?
+        w5 = self.weights[2][0]
+        outin_h1out = w5 
+        w1 = self.weights[0][0]
+        w2 = self.weights[0][1]
+        h1out_h1in_der =   self.sigmoid(x[0] * w1 + x[1] * w2 + self.biases[0])
+        h1out_h1in_der = (h1out_h1in_der * (1 - h1out_h1in_der))   
+        #print('err_out_der %.4f out_outin_der %.4f outin_h1out %.4f h1out_h1in_der  %.4f h1in_w1_der %.4f' 
+        #% (err_out_der ,out_outin_der , outin_h1out , h1out_h1in_der , h1in_w_der))
+        return err_out_der * out_outin_der * outin_h1out * h1out_h1in_der * h1in_w_der
+        
+
     def backward(self,x,y,output):
         #derivatives of sigmoid
                 
@@ -154,10 +168,16 @@ class MyNeuralNetwork:
         h2out = nn.forward_activ_outs[1][1]
         outin_w6_der = h2out 
         err_w6_der = self.der_of_last_layer(y,output,outin_w6_der)
-        err_w4_der = self.der_of_middle_layer(x,y,output)  
-        #print(self.weights)
-        #print(nn.forward_activ_outs)
-        print('err_w6_der %.4f outin_w5_der %.4f err_w4_der %.4f' % (err_w6_der,err_w5_der,err_w4_der))
+        w4 = self.weights[1][1]
+        err_w4_der = self.der_of_middle_layer(x,y,output,w4)
+        x0 = x[0]
+        x1 = x[1]
+        err_w3_der = self.der_of_middle_layer(x,y,output,x0)   
+        err_w1_der = self.der_of_first_weights(x,y,output,x0)
+        err_w2_der = self.der_of_first_weights(x,y,output,x1)
+        
+        print('err_w6_der %.5f outin_w5_der %.5f err_w4_der %.5f err_w3_der %.5f err_w1_der %.5f err_w2_der %.5f' 
+           % (err_w6_der,err_w5_der,err_w4_der,err_w3_der,err_w1_der,err_w2_der))
         
 if __name__ == '__main__':
 
