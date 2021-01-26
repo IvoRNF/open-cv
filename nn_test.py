@@ -23,15 +23,17 @@ class MyNeuralNetwork:
            print(msg) 
 
     def init_bias(self):
-        self.biases = np.random.uniform(low=-0.1,high=0.1,size=(len(self.weights)))      
+        bias_count = 0 
+        for layerConnWts in self.weights: 
+            for wtsBatch in layerConnWts: 
+                 bias_count += 1
+        self.biases = np.random.uniform(low=-0.1,high=0.1,size=(bias_count))      
 
     def init_weights(self):
-        last_input_sz =  self.inpt_layer_size
-        for neuron_count in [self.hidden_layer_size,self.output_layer_size]: 
-            weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(last_input_sz,neuron_count))
-            self.weights.append(weights_of_layer) 
-            last_input_sz = neuron_count 
-
+        w1 = np.random.uniform(low=-0.1,high=0.1,size=(self.hidden_layer_size,self.inpt_layer_size ))
+        w2 = np.random.uniform(low=-0.1,high=0.1,size=(self.output_layer_size,self.hidden_layer_size ))
+        self.weights =  [w1,w2]
+          
     def sigmoid(self,input_vl): 
         return 1.0/(1.0+np.exp(-1 * input_vl))  
 
@@ -42,46 +44,34 @@ class MyNeuralNetwork:
         y = inpt
         oldDoLog = self.logging
         self.logging = doLog
-        for i in range(len(self.weights)):
-            w = self.weights[i]
-            b = self.biases[i]
-            self.log('%s %s'%('1.start forward',y))
-            y = np.dot(y,w)  + b
-            self.log('%s %s'%('2.dot',y))
+        j = 0
+        self.log('%s %s'%('1.start forward',y))
+        for layerConnWts in self.weights:
+            for wtsBatch in layerConnWts:
+                w = wtsBatch
+                b = self.biases[j]
+                j+=1  
+                y = np.dot(y,w)  + b  
+                self.log('%s %s'%('2.dot',y))            
             y = self.sigmoid(y)    
             self.log('%s %s'%('3.sigmoid',y))
         self.logging = oldDoLog
         return y 
     def weights_flattened(self):
         result = []
-        for layer in self.weights: 
-            for vl in layer.flat: 
-              result.append(vl)
+        for layerConnWts in self.weights: 
+            for wtsBatch in layerConnWts:
+                for w in wtsBatch:
+                    result.append(w)           
         return np.array(result,dtype=np.float64)
     def weights_unflattened(self,flattened):
-        if len(self.weights)==0:
-            self.init_weights()
-        '''
-        result = []
-        start_idx = 0
-        for layer in self.weights: 
-            wts_of_layer = flattened[start_idx: start_idx + layer.shape[0]*layer.shape[1] ] 
-            start_idx += (len(wts_of_layer)) 
-            wts_of_layer = np.array(wts_of_layer,dtype=np.float64)
-            wts_of_layer = np.reshape(wts_of_layer,newshape=layer.shape) 
-            result.append(wts_of_layer) 
-        return result
-        '''
-        w1 = np.zeros(shape=self.inpt_layer_size)
-        w2 = np.zeros(shape=self.hidden_layer_size)
-        w3 = np.array([]) 
-
-        w1[:] = flattened[0:self.inpt_layer_size]
-        last = self.inpt_layer_size+self.hidden_layer_size
-        w2[:] = flattened[self.inpt_layer_size:last]      
-        for i in np.arange(last,len(flattened)):
-            w3 = np.append(w3,flattened[i])
-        return [w1,w2,w3]    
+        last = self.inpt_layer_size * self.hidden_layer_size
+        w1 = np.array(flattened[0:last])
+        w1 = w1.reshape(self.hidden_layer_size,self.inpt_layer_size)
+        wtsCount = self.hidden_layer_size * self.output_layer_size
+        w2 = np.array(flattened[last: last + wtsCount])
+        w2 = w2.reshape(self.output_layer_size,self.hidden_layer_size)
+        return [w1,w2]  
     def fit(self,x,y):
        self.x_train = x 
        self.y_train = y    
@@ -155,7 +145,11 @@ class MyNeuralNetwork:
         return err_out_der * out_outin_der * outin_h1out * h1out_h1in_der * h1in_w_der
         
     def neuron_output(self,x,wi):
-        wts = self.weights[wi]
+        wBatches = []
+        for wtsConns in self.weights:
+            for wBatch in wtsConns:
+                wBatches.append(wBatch)
+        wts = wBatches[wi]
         result = 0
         for i in np.arange(x.shape[0]):
             result += x[i] * wts[i]
@@ -174,28 +168,29 @@ class MyNeuralNetwork:
         #w3 = self.weights[1][0]
         x0 = x[0]
         x1 = x[1]
-        err_w4_der = self.der_of_middle_layer(x,y,output,w4) #w4 ?
+        err_w4_der = self.der_of_middle_layer(x,y,output,x1) 
         
         err_w3_der = self.der_of_middle_layer(x,y,output,x0)   
         err_w1_der = self.der_of_first_weights(x,y,output,x0)
         err_w2_der = self.der_of_first_weights(x,y,output,x1)
         
         ders = [err_w1_der,err_w2_der,err_w3_der,err_w4_der,err_w5_der,err_w6_der]
+        newWeights = self.weights_flattened()
         k = 0 
-        for i in np.arange( len(self.weights) ):
-            for j in np.arange( self.weights[i].shape[0] ):
-                der = ders[k]
-                self.weights[i][j] = self.weights[i][j] - (lr * der)
-                k += 1
+        for i in range(len(newWeights)):
+            w = newWeights[i]
+            der = ders[i]
+            newWeights[i] = newWeights[i] - (lr * der)
+        self.weights = self.weights_unflattened(newWeights)
         #print('err_w6_der %.5f outin_w5_der %.5f err_w4_der %.5f err_w3_der %.5f err_w1_der %.5f err_w2_der %.5f' 
         #   % (err_w6_der,err_w5_der,err_w4_der,err_w3_der,err_w1_der,err_w2_der))
     def train(self,epochs=2000,lr=0.8):
         i = 0
         for i in range(epochs):  
             out = self.forward(self.x_train[0],doLog=False)
-            print('out %.5f' % (out))
+            print('out %.4f' % (out))
             err = self.mseLoss(self.y_train[0],out)
-            print('err %.5f' % (err))
+            print('err %.4f' % (err))
             if out == self.y_train[0]:
                 break 
             nn.backward(self.x_train[0],self.y_train[0],out,lr=lr)  
@@ -213,20 +208,15 @@ if __name__ == '__main__':
     nn.fit(x_train,y_train)
     nn.try_load()
     v = input()    
-    if v == '1':    
-        nn.weights = [np.array([0.5,0.1]),
-                        np.array([0.62,0.2]),
-                        np.array([-0.2,0.3]),   ]
-        nn.biases =  np.array([0.4,-0.1,1.83])   
-    
+    if v == '1':          
         print('training')
-        nn.train(lr=0.8,epochs=2000)            
+        nn.train(lr=0.80,epochs=2000)            
         print('Save model ? 1=Y,2=N')
         inp = input()
         if inp=='1':
             nn.save()
     elif v == '2':       
-        out = nn.forward(x_train[0],doLog=True)
+        out = nn.forward(x_train[0],doLog=False)
         print('out %.5f' % (out))     
         err = nn.mseLoss(y_train[0],out)
         print('err %.5f' % (err))
