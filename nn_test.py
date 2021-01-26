@@ -188,9 +188,9 @@ class MyNeuralNetwork:
         i = 0
         for i in range(epochs):  
             out = self.forward(self.x_train[0],doLog=False)
-            print('out %.4f' % (out))
+            print('out %.5f' % (out))
             err = self.mseLoss(self.y_train[0],out)
-            print('err %.4f' % (err))
+            print('err %.5f' % (err))
             if out == self.y_train[0]:
                 break 
             nn.backward(self.x_train[0],self.y_train[0],out,lr=lr)  
