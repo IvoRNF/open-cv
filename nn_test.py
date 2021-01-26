@@ -1,15 +1,14 @@
 import numpy as np 
-from ga import GeneticAlgorithm
 import pickle 
 import os
 
 
 class MyNeuralNetwork:
 
-    def __init__(self,inpt_layer_size,hidden_layer_sizes,output_layer_size,model_f_name,logging=True):
+    def __init__(self,inpt_layer_size,hidden_layer_size,output_layer_size,model_f_name,logging=True):
         self.model_f_name = model_f_name
         self.inpt_layer_size = inpt_layer_size 
-        self.hidden_layer_sizes = hidden_layer_sizes 
+        self.hidden_layer_size = hidden_layer_size
         self.output_layer_size = output_layer_size
         self.logging = logging
         self.weights = []
@@ -28,7 +27,7 @@ class MyNeuralNetwork:
 
     def init_weights(self):
         last_input_sz =  self.inpt_layer_size
-        for neuron_count in [*self.hidden_layer_sizes,self.output_layer_size]: 
+        for neuron_count in [self.hidden_layer_size,self.output_layer_size]: 
             weights_of_layer = np.random.uniform(low=-0.1,high=0.1,size=(last_input_sz,neuron_count))
             self.weights.append(weights_of_layer) 
             last_input_sz = neuron_count 
@@ -74,11 +73,11 @@ class MyNeuralNetwork:
         return result
         '''
         w1 = np.zeros(shape=self.inpt_layer_size)
-        w2 = np.zeros(shape=self.hidden_layer_sizes[0])
+        w2 = np.zeros(shape=self.hidden_layer_size)
         w3 = np.array([]) 
 
         w1[:] = flattened[0:self.inpt_layer_size]
-        last = self.inpt_layer_size+self.hidden_layer_sizes[0]
+        last = self.inpt_layer_size+self.hidden_layer_size
         w2[:] = flattened[self.inpt_layer_size:last]      
         for i in np.arange(last,len(flattened)):
             w3 = np.append(w3,flattened[i])
@@ -104,9 +103,6 @@ class MyNeuralNetwork:
         if ret_stats:
             return {'acc_float': acc, 'acc_int':len(c_correct)/len(self.y_train),'probs':[ (self.y_train[x],probs[x]) for x in np.arange(len(self.y_train)) ]}         
         return acc
-    def fitness_func(self,sol):   
-        self.weights = self.weights_unflattened(sol)
-        return self.eval_model()
     def try_load(self):
         modelf_exist = os.path.exists(self.model_f_name)
         if not modelf_exist:
@@ -126,19 +122,6 @@ class MyNeuralNetwork:
            mapa = {"weights":flattened,"bias":self.biases} 
            pickle.dump(mapa,f)
         print('saved model to file %s' % (self.model_f_name))        
-    def train_ga(self,generations=90):
-        flattened = self.weights_flattened()
-        initial_solutions = np.random.uniform(low=-1.0,high=1.0,size=(20,len(flattened)))
-        initial_solutions[0] = np.array(flattened,dtype=np.float64)
-        ga = GeneticAlgorithm(
-            solutions=initial_solutions, 
-            num_parents_for_mating=4,
-            generations=generations,
-            fitness_func=self.fitness_func ,
-            offspring_sz=4
-        )
-        ga.start()
-        self.weights =  self.weights_unflattened(ga.solutions[0]) #best solution
     
     def der_of_last_layer(self,y,output,der_of_weight):
         err_out_der =  output - y 
@@ -221,45 +204,33 @@ if __name__ == '__main__':
 
     model_f_name = './datasets/my_nn79.pk'
     inpt_sz = 2
-    hidden_szs = [2]
+    hidden_sz = 2
     outpt_sz = 1
     x_train = np.array([[0.1,0.3]])
     y_train = np.array([0.03])
     print('1 - train and evaluate\n2 - load and evaluate') 
-    v = input()
-    if v=='1':
-        print('training')
-        nn = MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
-        nn.fit(x_train,y_train)
-        nn.try_load()
-        print('train ? 1=Y,2=N')
-        v = input()
-        if v == '1':
-            
-            nn.weights = [np.array([0.5,0.1]),
+    nn = MyNeuralNetwork(inpt_sz,hidden_sz,outpt_sz,model_f_name,True)
+    nn.fit(x_train,y_train)
+    nn.try_load()
+    v = input()    
+    if v == '1':    
+        nn.weights = [np.array([0.5,0.1]),
                         np.array([0.62,0.2]),
                         np.array([-0.2,0.3]),   ]
-            nn.biases =  np.array([0.4,-0.1,1.83])   
-            
-            nn.train(lr=0.8,epochs=2000)            
-            print('Save model ? 1=Y,2=N')
-            v = input()
-            if v=='1':
-                nn.save() 
-        else:        
-           out = nn.forward(x_train[0],doLog=True)
-           print('out %.5f' % (out))     
-           err = nn.mseLoss(y_train[0],out)
-           print('err %.5f' % (err))
-        #nn.train_ga(45)
-        #stats = nn.eval_model(ret_stats=True)
-        #print(stats)
+        nn.biases =  np.array([0.4,-0.1,1.83])   
+    
+        print('training')
+        nn.train(lr=0.8,epochs=2000)            
+        print('Save model ? 1=Y,2=N')
+        inp = input()
+        if inp=='1':
+            nn.save()
+    elif v == '2':       
+        out = nn.forward(x_train[0],doLog=True)
+        print('out %.5f' % (out))     
+        err = nn.mseLoss(y_train[0],out)
+        print('err %.5f' % (err))
+       
         
-    elif v=='2':    
-        nn= MyNeuralNetwork(inpt_sz,hidden_szs,outpt_sz,model_f_name,True)
-        nn.fit(x_train,y_train)
-        nn.try_load()   
-        print(nn.forward(np.array([0,255])))
-        stats = nn.eval_model(ret_stats=True)
-        print(stats)
+    
      
