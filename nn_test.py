@@ -13,6 +13,8 @@ class MyNeuralNetwork:
         self.logging = logging
         self.weights = []
         self.biases = []
+        self.training = False
+        self.neuron_outputs = []
  
     def log(self,msg=None):
         if not self.logging:
@@ -24,9 +26,8 @@ class MyNeuralNetwork:
 
     def init_bias(self):
         bias_count = 0 
-        for layerConnWts in self.weights: 
-            for wtsBatch in layerConnWts: 
-                 bias_count += 1
+        for layerConnWts in self.weights:  
+                 bias_count += layerConnWts.shape[0]
         self.biases = np.random.uniform(low=-0.1,high=0.1,size=(bias_count))      
 
     def init_weights(self):
@@ -38,20 +39,36 @@ class MyNeuralNetwork:
         return 1.0/(1.0+np.exp(-1 * input_vl))  
 
     def mseLoss(self,y,output):
-        return np.power(y - output,2)    
+        return np.power(y - output,2)  
+
+    def dot(self,x,w,b):      
+        training = True  
+        if x.shape == w.shape: 
+            multiplications  = x * w + b
+            if training:
+               self.neuron_outputs.extend(list(multiplications))
+            return multiplications.sum()
+        else: 
+            result = np.dot(x,w)
+            result = result + b 
+            if training:
+               self.neuron_outputs.extend(list(result))   
+            return result 
         
     def forward(self,inpt,doLog=False):
         y = inpt
         oldDoLog = self.logging
         self.logging = doLog
         j = 0
+        if self.training: 
+            self.neuron_outputs = []
         self.log('%s %s'%('1.start forward',y))
         for layerConnWts in self.weights:
             for wtsBatch in layerConnWts:
                 w = wtsBatch
                 b = self.biases[j]
                 j+=1  
-                y = np.dot(y,w)  + b  
+                y = self.dot(y,w,b)  
                 self.log('%s %s'%('2.dot',y))            
             y = self.sigmoid(y)    
             self.log('%s %s'%('3.sigmoid',y))
@@ -152,8 +169,7 @@ class MyNeuralNetwork:
         wts = wBatches[wi]
         result = 0
         for i in np.arange(x.shape[0]):
-            result += x[i] * wts[i]
-        result = result + self.biases[wi]
+            result += x[i] * wts[i] + self.biases[wi]
         return self.sigmoid(result)
     def backward(self,x,y,output,lr=0.001):
         #derivatives of sigmoid
@@ -186,6 +202,7 @@ class MyNeuralNetwork:
         #   % (err_w6_der,err_w5_der,err_w4_der,err_w3_der,err_w1_der,err_w2_der))
     def train(self,epochs=2000,lr=0.8):
         i = 0
+        self.training = True
         for i in range(epochs):  
             out = self.forward(self.x_train[0],doLog=False)
             print('out %.5f' % (out))
@@ -194,6 +211,7 @@ class MyNeuralNetwork:
             if out == self.y_train[0]:
                 break 
             nn.backward(self.x_train[0],self.y_train[0],out,lr=lr)  
+        self.training = False
         print('trained epochs %d' % (i))       
 if __name__ == '__main__':
 
@@ -202,7 +220,7 @@ if __name__ == '__main__':
     hidden_sz = 2
     outpt_sz = 1
     x_train = np.array([[0.1,0.3]])
-    y_train = np.array([0.03])
+    y_train = np.array([0.70])
     print('1 - train and evaluate\n2 - load and evaluate') 
     nn = MyNeuralNetwork(inpt_sz,hidden_sz,outpt_sz,model_f_name,True)
     nn.fit(x_train,y_train)
@@ -217,6 +235,9 @@ if __name__ == '__main__':
             nn.save()
     elif v == '2':       
         out = nn.forward(x_train[0],doLog=False)
+        print(nn.neuron_output(x_train[0],0))
+        print( nn.sigmoid( nn.neuron_outputs[0] + nn.neuron_outputs[1]) )
+        print(nn.neuron_outputs )
         print('out %.5f' % (out))     
         err = nn.mseLoss(y_train[0],out)
         print('err %.5f' % (err))
