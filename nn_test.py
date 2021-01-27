@@ -42,7 +42,7 @@ class MyNeuralNetwork:
         return np.power(y - output,2)  
 
     def dot(self,x,w,b):      
-        training = True  
+        training = self.training  
         if x.shape == w.shape: 
             multiplications  = x * w + b
             if training:
@@ -236,7 +236,7 @@ if __name__ == '__main__':
     elif v == '2':       
         out = nn.forward(x_train[0],doLog=False)
         print(nn.neuron_output(x_train[0],0))
-        print( nn.sigmoid( nn.neuron_outputs[0] + nn.neuron_outputs[1]) )
+        #print( nn.sigmoid( nn.neuron_outputs[0] + nn.neuron_outputs[1]) )
         print(nn.neuron_outputs )
         print('out %.5f' % (out))     
         err = nn.mseLoss(y_train[0],out)
