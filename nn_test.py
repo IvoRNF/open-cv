@@ -42,7 +42,7 @@ class MyNeuralNetwork:
         return np.power(y - output,2)  
 
     def dot(self,x,w,b):      
-        training = self.training  
+        training = self.training
         if x.shape == w.shape: 
             multiplications  = x * w + b
             if training:
@@ -180,8 +180,6 @@ class MyNeuralNetwork:
         outin_w6_der = h2out 
         err_w6_der = self.der_of_last_layer(y,output,outin_w6_der)
         flattened = self.weights_flattened()
-        w4 = flattened[4-1]
-        #w3 = self.weights[1][0]
         x0 = x[0]
         x1 = x[1]
         err_w4_der = self.der_of_middle_layer(x,y,output,x1) 
@@ -192,9 +190,8 @@ class MyNeuralNetwork:
         
         ders = [err_w1_der,err_w2_der,err_w3_der,err_w4_der,err_w5_der,err_w6_der]
         newWeights = self.weights_flattened()
-        k = 0 
+
         for i in range(len(newWeights)):
-            w = newWeights[i]
             der = ders[i]
             newWeights[i] = newWeights[i] - (lr * der)
         self.weights = self.weights_unflattened(newWeights)
@@ -234,9 +231,10 @@ if __name__ == '__main__':
         if inp=='1':
             nn.save()
     elif v == '2':       
+        nn.training = True #test
         out = nn.forward(x_train[0],doLog=False)
         print(nn.neuron_output(x_train[0],0))
-        #print( nn.sigmoid( nn.neuron_outputs[0] + nn.neuron_outputs[1]) )
+        print( nn.sigmoid( nn.neuron_outputs[0] + nn.neuron_outputs[1]) )
         print(nn.neuron_outputs )
         print('out %.5f' % (out))     
         err = nn.mseLoss(y_train[0],out)
