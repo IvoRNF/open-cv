@@ -179,7 +179,6 @@ class MyNeuralNetwork:
         h2out = self.neuron_output(x,1)
         outin_w6_der = h2out 
         err_w6_der = self.der_of_last_layer(y,output,outin_w6_der)
-        flattened = self.weights_flattened()
         x0 = x[0]
         x1 = x[1]
         err_w4_der = self.der_of_middle_layer(x,y,output,x1) 
@@ -207,6 +206,8 @@ class MyNeuralNetwork:
             print('err %.5f' % (err))
             if out == self.y_train[0]:
                 break 
+            if err==0:
+                break
             nn.backward(self.x_train[0],self.y_train[0],out,lr=lr)  
         self.training = False
         print('trained epochs %d' % (i))       
