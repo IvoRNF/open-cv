@@ -120,53 +120,58 @@ class MyNeuralNetwork:
            pickle.dump(mapa,f)
         print('saved model to file %s' % (self.model_f_name))        
     
-    def der_of_last_layer(self,y,output,der_of_weight):
-        err_out_der =  output - y 
-        out_outin_der = output * (1 - output) 
-        return err_out_der * out_outin_der * der_of_weight
+    
   
-    def der_of_middle_layer(self,x,y,output,w,neuron_outputs):
-        err_out_der =  output - y 
-        out_outin_der = output * (1 - output) 
+    def der_of_middle_layer(self,x,y,output,w,derivative_previous_layer):
+        #err_out_der =  output - y 
+        #out_outin_der = output * (1 - output) 
         flattened = self.weights_flattened()
         w6 = flattened[6-1]
-        #w3 = self.weights[1][0]
-        #w4 = self.weights[1][1]
         outin_h2out_der = w6
-        h2out_h2in_der =  neuron_outputs[1]
-        h2out_h2in_der = (h2out_h2in_der * (1 - h2out_h2in_der)) 
+        #h2out_h2in_der =  neuron_outputs[1]
+        #h2out_h2in_der = (h2out_h2in_der * (1 - h2out_h2in_der)) 
         h2in_w = w 
         #print('err_out_der %.4f out_outin_der %.4f outin_h2out_der %.4f h2out_h2in_der  %.4f h2in_w4 %.4f' % (err_out_der ,out_outin_der,outin_h2out_der,h2out_h2in_der,h2in_w4))
-        return err_out_der * out_outin_der * outin_h2out_der * h2out_h2in_der  * h2in_w
+        #return err_out_der * out_outin_der * outin_h2out_der * h2out_h2in_der  * h2in_w
+        return outin_h2out_der * h2in_w * derivative_previous_layer
+        #return err_out_der * out_outin_der * outin_h2out_der * h2out_h2in_der  * h2in_w
     
-    def der_of_first_weights(self,x,y,output,h1in_w_der,neuron_outputs):
-        err_out_der =  output - y 
-        out_outin_der = output * (1 - output)
+    def der_of_first_weights(self,x,y,output,h1in_w_der,derivative_previous_layer):
+        #err_out_der =  output - y 
+        #out_outin_der = output * (1 - output)
         flattened = self.weights_flattened() 
         w5 = flattened[5-1]
         outin_h1out = w5 
-        h1out_h1in_der =   neuron_outputs[0] 
-        h1out_h1in_der = (h1out_h1in_der * (1 - h1out_h1in_der))   
+        #h1out_h1in_der =   neuron_outputs[0] 
+        #h1out_h1in_der = (h1out_h1in_der * (1 - h1out_h1in_der))   
         #print('err_out_der %.4f out_outin_der %.4f outin_h1out %.4f h1out_h1in_der  %.4f h1in_w1_der %.4f' 
         #% (err_out_der ,out_outin_der , outin_h1out , h1out_h1in_der , h1in_w_der))
-        return err_out_der * out_outin_der * outin_h1out * h1out_h1in_der * h1in_w_der
+        #return err_out_der * out_outin_der * outin_h1out * h1out_h1in_der * h1in_w_der
+        return outin_h1out * h1in_w_der * derivative_previous_layer
         
-    
+    def der_of_last_layer(self,y,output,der_of_weight):
+        err_out_der =  output - y 
+        out_outin_der = output * (1 - output) 
+        return err_out_der * out_outin_der * der_of_weight 
+
+
     def backward(self,x,y,output,lr=0.001,neuron_outputs=None):
         #derivatives of sigmoid
         h1out = neuron_outputs[0]
+        h1out = h1out * (1 - h1out)
         outin_w5_der = h1out 
         err_w5_der = self.der_of_last_layer(y,output,outin_w5_der)
         h2out = neuron_outputs[1]
+        h2out = h2out * (1 - h2out)
         outin_w6_der = h2out 
         err_w6_der = self.der_of_last_layer(y,output,outin_w6_der)
         x0 = x[0]
         x1 = x[1]
-        err_w4_der = self.der_of_middle_layer(x,y,output,x1,neuron_outputs=neuron_outputs) 
+        err_w4_der = self.der_of_middle_layer(x,y,output,x1,err_w6_der) 
         
-        err_w3_der = self.der_of_middle_layer(x,y,output,x0,neuron_outputs=neuron_outputs)   
-        err_w1_der = self.der_of_first_weights(x,y,output,x0,neuron_outputs=neuron_outputs)
-        err_w2_der = self.der_of_first_weights(x,y,output,x1,neuron_outputs=neuron_outputs)
+        err_w3_der = self.der_of_middle_layer(x,y,output,x0,err_w6_der)   
+        err_w1_der = self.der_of_first_weights(x,y,output,x0,err_w5_der)
+        err_w2_der = self.der_of_first_weights(x,y,output,x1,err_w5_der)
         
         ders = [err_w1_der,err_w2_der,err_w3_der,err_w4_der,err_w5_der,err_w6_der]
         newWeights = self.weights_flattened()
