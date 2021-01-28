@@ -123,30 +123,16 @@ class MyNeuralNetwork:
     
   
     def der_of_middle_layer(self,x,y,output,w,derivative_previous_layer):
-        #err_out_der =  output - y 
-        #out_outin_der = output * (1 - output) 
         flattened = self.weights_flattened()
         w6 = flattened[6-1]
         outin_h2out_der = w6
-        #h2out_h2in_der =  neuron_outputs[1]
-        #h2out_h2in_der = (h2out_h2in_der * (1 - h2out_h2in_der)) 
         h2in_w = w 
-        #print('err_out_der %.4f out_outin_der %.4f outin_h2out_der %.4f h2out_h2in_der  %.4f h2in_w4 %.4f' % (err_out_der ,out_outin_der,outin_h2out_der,h2out_h2in_der,h2in_w4))
-        #return err_out_der * out_outin_der * outin_h2out_der * h2out_h2in_der  * h2in_w
         return outin_h2out_der * h2in_w * derivative_previous_layer
-        #return err_out_der * out_outin_der * outin_h2out_der * h2out_h2in_der  * h2in_w
     
     def der_of_first_weights(self,x,y,output,h1in_w_der,derivative_previous_layer):
-        #err_out_der =  output - y 
-        #out_outin_der = output * (1 - output)
         flattened = self.weights_flattened() 
         w5 = flattened[5-1]
         outin_h1out = w5 
-        #h1out_h1in_der =   neuron_outputs[0] 
-        #h1out_h1in_der = (h1out_h1in_der * (1 - h1out_h1in_der))   
-        #print('err_out_der %.4f out_outin_der %.4f outin_h1out %.4f h1out_h1in_der  %.4f h1in_w1_der %.4f' 
-        #% (err_out_der ,out_outin_der , outin_h1out , h1out_h1in_der , h1in_w_der))
-        #return err_out_der * out_outin_der * outin_h1out * h1out_h1in_der * h1in_w_der
         return outin_h1out * h1in_w_der * derivative_previous_layer
         
     def der_of_last_layer(self,y,output,der_of_weight):
@@ -180,9 +166,9 @@ class MyNeuralNetwork:
             der = ders[i]
             newWeights[i] = newWeights[i] - (lr * der)
         self.weights = self.weights_unflattened(newWeights)
-        #print('err_w6_der %.5f outin_w5_der %.5f err_w4_der %.5f err_w3_der %.5f err_w1_der %.5f err_w2_der %.5f' 
-        #   % (err_w6_der,err_w5_der,err_w4_der,err_w3_der,err_w1_der,err_w2_der))
-    def train(self,epochs=2000,lr=0.8):
+        print('err_w6_der %.5f outin_w5_der %.5f err_w4_der %.5f err_w3_der %.5f err_w1_der %.5f err_w2_der %.5f' 
+           % (err_w6_der,err_w5_der,err_w4_der,err_w3_der,err_w1_der,err_w2_der))
+    def train(self,epochs=100,lr=0.001):
         i = 0
         for i in range(epochs):  
             out,neuron_outputs = self.forward(self.x_train[0],doLog=False,doRetNeuronOutputs=True)
@@ -213,7 +199,7 @@ if __name__ == '__main__':
     hidden_sz = 2
     outpt_sz = 1
     x_train = np.array([[0.1,0.3]])
-    y_train = np.array([0.4])
+    y_train = np.array([0.33])
     print('1 - train and evaluate\n2 - load and evaluate') 
     nn = MyNeuralNetwork(inpt_sz,hidden_sz,outpt_sz,model_f_name,True)
     nn.fit(x_train,y_train)
@@ -221,7 +207,7 @@ if __name__ == '__main__':
     v = input()    
     if v == '1':          
         print('training')
-        nn.train(lr=0.80,epochs=2000)            
+        nn.train(lr=0.1,epochs=2000)            
         print('Save model ? 1=Y,2=N')
         inp = input()
         if inp=='1':
