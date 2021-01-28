@@ -41,19 +41,7 @@ class MyNeuralNetwork:
     def mseLoss(self,y,output):
         return np.power(y - output,2)  
 
-    def dot(self,x,w,b):      
-        training = self.training
-        if x.shape == w.shape: 
-            multiplications  = x * w + b
-            if training:
-               self.neuron_outputs.extend(list(multiplications))
-            return multiplications.sum()
-        else: 
-            result = np.dot(x,w)
-            result = result + b 
-            if training:
-               self.neuron_outputs.extend(list(result))   
-            return result 
+    
         
     def forward(self,inpt,doLog=False):
         y = inpt
@@ -68,6 +56,8 @@ class MyNeuralNetwork:
                 w = wtsBatch
                 b = self.biases[j]
                 j+=1  
+                if self.training:
+                    self.neuron_outputs.append(nn.neuron_output(inpt,wtsBatch,b))
                 y = self.dot(y,w,b)  
                 self.log('%s %s'%('2.dot',y))            
             y = self.sigmoid(y)    
@@ -143,7 +133,7 @@ class MyNeuralNetwork:
         #w3 = self.weights[1][0]
         #w4 = self.weights[1][1]
         outin_h2out_der = w6
-        h2out_h2in_der =  self.neuron_output(x,1)
+        h2out_h2in_der =  self.neuron_outputs[1]
         h2out_h2in_der = (h2out_h2in_der * (1 - h2out_h2in_der)) 
         h2in_w = w 
         #print('err_out_der %.4f out_outin_der %.4f outin_h2out_der %.4f h2out_h2in_der  %.4f h2in_w4 %.4f' % (err_out_der ,out_outin_der,outin_h2out_der,h2out_h2in_der,h2in_w4))
@@ -155,28 +145,19 @@ class MyNeuralNetwork:
         flattened = self.weights_flattened() 
         w5 = flattened[5-1]
         outin_h1out = w5 
-        h1out_h1in_der =   self.neuron_output(x,0) 
+        h1out_h1in_der =   self.neuron_outputs[0] 
         h1out_h1in_der = (h1out_h1in_der * (1 - h1out_h1in_der))   
         #print('err_out_der %.4f out_outin_der %.4f outin_h1out %.4f h1out_h1in_der  %.4f h1in_w1_der %.4f' 
         #% (err_out_der ,out_outin_der , outin_h1out , h1out_h1in_der , h1in_w_der))
         return err_out_der * out_outin_der * outin_h1out * h1out_h1in_der * h1in_w_der
         
-    def neuron_output(self,x,wi):
-        wBatches = []
-        for wtsConns in self.weights:
-            for wBatch in wtsConns:
-                wBatches.append(wBatch)
-        wts = wBatches[wi]
-        result = 0
-        for i in np.arange(x.shape[0]):
-            result += x[i] * wts[i] + self.biases[wi]
-        return self.sigmoid(result)
+    
     def backward(self,x,y,output,lr=0.001):
         #derivatives of sigmoid
-        h1out = self.neuron_output(x,0)
+        h1out = self.neuron_outputs[0]
         outin_w5_der = h1out 
         err_w5_der = self.der_of_last_layer(y,output,outin_w5_der)
-        h2out = self.neuron_output(x,1)
+        h2out = self.neuron_outputs[1]
         outin_w6_der = h2out 
         err_w6_der = self.der_of_last_layer(y,output,outin_w6_der)
         x0 = x[0]
@@ -210,7 +191,21 @@ class MyNeuralNetwork:
                 break
             nn.backward(self.x_train[0],self.y_train[0],out,lr=lr)  
         self.training = False
-        print('trained epochs %d' % (i))       
+        print('trained epochs %d' % (i))      
+
+
+    def neuron_output(self,x,wBacth,bias):
+        result = 0
+        if type(x) != np.ndarray: 
+            result += x * wBacth + bias 
+        else:    
+            for i in np.arange(x.shape[0]):
+                result += x[i] * wBacth[i] + bias
+        return self.sigmoid(result)
+    def dot(self,x,w,b):               
+        result = np.dot(x,w)
+        result = result + b      
+        return result       
 if __name__ == '__main__':
 
     model_f_name = './datasets/my_nn79.pk'
@@ -218,7 +213,7 @@ if __name__ == '__main__':
     hidden_sz = 2
     outpt_sz = 1
     x_train = np.array([[0.1,0.3]])
-    y_train = np.array([0.70])
+    y_train = np.array([0.98])
     print('1 - train and evaluate\n2 - load and evaluate') 
     nn = MyNeuralNetwork(inpt_sz,hidden_sz,outpt_sz,model_f_name,True)
     nn.fit(x_train,y_train)
@@ -234,12 +229,12 @@ if __name__ == '__main__':
     elif v == '2':       
         nn.training = True #test
         out = nn.forward(x_train[0],doLog=False)
-        print(nn.neuron_output(x_train[0],0))
-        print( nn.sigmoid( nn.neuron_outputs[0] + nn.neuron_outputs[1]) )
+        print('neuron outputs')
         print(nn.neuron_outputs )
         print('out %.5f' % (out))     
         err = nn.mseLoss(y_train[0],out)
         print('err %.5f' % (err))
+        
        
         
     
