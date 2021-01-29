@@ -41,28 +41,30 @@ class MyNeuralNetwork:
 
     
         
-    def forward(self,inpt,doLog=False,doRetNeuronOutputs=False):
+    def forward(self,inpt,doLog=False,doRetHiddenNeuronOutputs=False):
         y = inpt
         oldDoLog = self.logging
         self.logging = doLog
         j = 0
-        neuron_outputs = []
+        hidden_neuron_outputs = []
+        firstLayerIdx = 0
         self.log('%s %s'%('1.start forward',y))
-        for layerConnWts in self.weights:
+        for i in range(len(self.weights)):
+            layerConnWts = self.weights[i]
             for wtsBatch in layerConnWts:
                 w = wtsBatch
                 b = self.biases[j]
                 j+=1  
-                if doRetNeuronOutputs:
-                    neuron_outputs.append(nn.neuron_output(inpt,wtsBatch,b))  
+                if doRetHiddenNeuronOutputs and (i==firstLayerIdx):
+                    hidden_neuron_outputs.append(nn.neuron_output(inpt,wtsBatch,b))  
                 y = np.dot(y,w)
                 y = y + b 
                 self.log('%s %s'%('2.dot',y))            
             y = self.sigmoid(y)    
             self.log('%s %s'%('3.sigmoid',y))
         self.logging = oldDoLog
-        if doRetNeuronOutputs:
-            return y,neuron_outputs
+        if doRetHiddenNeuronOutputs:
+            return y,hidden_neuron_outputs
         return y 
     def weights_flattened(self):
         result = []
@@ -119,59 +121,37 @@ class MyNeuralNetwork:
            mapa = {"weights":flattened,"bias":self.biases} 
            pickle.dump(mapa,f)
         print('saved model to file %s' % (self.model_f_name))        
-    
-    
-  
-    def der_of_middle_layer(self,x,y,output,w,derivative_previous_layer):
-        flattened = self.weights_flattened()
-        w6 = flattened[6-1]
-        outin_h2out_der = w6
-        h2in_w = w 
-        return outin_h2out_der * h2in_w * derivative_previous_layer
-    
-    def der_of_first_weights(self,x,y,output,h1in_w_der,derivative_previous_layer):
-        flattened = self.weights_flattened() 
-        w5 = flattened[5-1]
-        outin_h1out = w5 
-        return outin_h1out * h1in_w_der * derivative_previous_layer
-        
+      
     def der_of_last_layer(self,y,output,der_of_weight):
         err_out_der =  output - y 
         out_outin_der = output * (1 - output) 
         return err_out_der * out_outin_der * der_of_weight 
 
-
-    def backward(self,x,y,output,lr=0.001,neuron_outputs=None):
+    def backward(self,x,y,output,lr=0.001,hidden_neuron_outputs=None):
         #derivatives of sigmoid
-        h1out = neuron_outputs[0]
-        h1out = h1out * (1 - h1out)
-        outin_w5_der = h1out 
-        err_w5_der = self.der_of_last_layer(y,output,outin_w5_der)
-        h2out = neuron_outputs[1]
-        h2out = h2out * (1 - h2out)
-        outin_w6_der = h2out 
-        err_w6_der = self.der_of_last_layer(y,output,outin_w6_der)
-        x0 = x[0]
-        x1 = x[1]
-        err_w4_der = self.der_of_middle_layer(x,y,output,x1,err_w6_der) 
-        
-        err_w3_der = self.der_of_middle_layer(x,y,output,x0,err_w6_der)   
-        err_w1_der = self.der_of_first_weights(x,y,output,x0,err_w5_der)
-        err_w2_der = self.der_of_first_weights(x,y,output,x1,err_w5_der)
-        
-        ders = [err_w1_der,err_w2_der,err_w3_der,err_w4_der,err_w5_der,err_w6_der]
+        derivativesLastLayer = []
+        derivatives = []
+        for hout in hidden_neuron_outputs: 
+            der = self.der_of_last_layer(y,output, hout * (1 - hout) )
+            derivativesLastLayer.append(der)
+        lastWeights = self.weights[1].ravel()    
+        for derLastLayer,w in zip(derivativesLastLayer,lastWeights):
+          for xN in x: 
+              der = w * xN * derLastLayer
+              derivatives.append(der)
+        derivatives.extend(derivativesLastLayer)
+        #print(derivatives)
         newWeights = self.weights_flattened()
 
         for i in range(len(newWeights)):
-            der = ders[i]
+            der = derivatives[i]
             newWeights[i] = newWeights[i] - (lr * der)
         self.weights = self.weights_unflattened(newWeights)
-        print('err_w6_der %.5f outin_w5_der %.5f err_w4_der %.5f err_w3_der %.5f err_w1_der %.5f err_w2_der %.5f' 
-           % (err_w6_der,err_w5_der,err_w4_der,err_w3_der,err_w1_der,err_w2_der))
+    
     def train(self,epochs=100,lr=0.001):
         i = 0
         for i in range(epochs):  
-            out,neuron_outputs = self.forward(self.x_train[0],doLog=False,doRetNeuronOutputs=True)
+            out,hidden_neuron_outputs = self.forward(self.x_train[0],doLog=False,doRetHiddenNeuronOutputs=True)
             print('out %.5f' % (out))
             err = self.mseLoss(self.y_train[0],out)
             print('err %.5f' % (err))
@@ -179,7 +159,7 @@ class MyNeuralNetwork:
                 break 
             if err==0:
                 break
-            nn.backward(self.x_train[0],self.y_train[0],out,lr=lr,neuron_outputs = neuron_outputs)  
+            nn.backward(self.x_train[0],self.y_train[0],out,lr=lr,hidden_neuron_outputs = hidden_neuron_outputs)  
         print('trained epochs %d' % (i))      
 
 
@@ -199,7 +179,7 @@ if __name__ == '__main__':
     hidden_sz = 2
     outpt_sz = 1
     x_train = np.array([[0.1,0.3]])
-    y_train = np.array([0.55])
+    y_train = np.array([0.44])
     print('1 - train and evaluate\n2 - load and evaluate') 
     nn = MyNeuralNetwork(inpt_sz,hidden_sz,outpt_sz,model_f_name,True)
     nn.fit(x_train,y_train)
@@ -207,7 +187,7 @@ if __name__ == '__main__':
     v = input()    
     if v == '1':          
         print('training')
-        nn.train(lr=0.1,epochs=2000)            
+        nn.train(lr=0.5,epochs=1000)            
         print('Save model ? 1=Y,2=N')
         inp = input()
         if inp=='1':
