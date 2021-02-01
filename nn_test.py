@@ -156,6 +156,8 @@ class MyNeuralNetwork:
               der = w * xN * derLastLayer
               derivatives.append(der)
         derivatives.extend(derivativesLastLayer)
+        fmtedDers = ['%.5f' % (d) for d in derivatives]
+        print(fmtedDers)
         newWeights = self.weights_flattened()
         for i in range(len(newWeights)):
             der = derivatives[i]
@@ -200,7 +202,7 @@ if __name__ == '__main__':
     hidden_sz = 2
     outpt_sz = 1
     x_train = np.array([[0.1,0.3]])
-    y_train = np.array([0.56])
+    y_train = np.array([1])
     
     '''
     outpt_sz = 2
