@@ -38,7 +38,8 @@ class MyNeuralNetwork:
         return 1.0/(1.0+np.exp(-1 * input_vl))  
 
     def mseLoss(self,y,output):
-        return 0.5 * np.power(y - output,2)  
+        result = 0.5 * np.power(y - output,2)
+        return np.sum(result)   
 
     
         
@@ -128,7 +129,7 @@ class MyNeuralNetwork:
         out_outin_der = output * (1 - output) 
         return err_out_der * out_outin_der * der_of_weight 
 
-    def backward(self,x,y,output,lr=0.001,hidden_neuron_outputs=None,weightsBatchIdx=0):
+    def backward(self,x,y,output,lr=0.001,hidden_neuron_outputs=None):
         #derivatives of sigmoid
         derivativesLastLayerByBatch = []
         derivatives = []
@@ -136,6 +137,7 @@ class MyNeuralNetwork:
             der = self.der_of_last_layer(y,output, hout * (1 - hout) )
             derivativesLastLayerByBatch.append(der)
       
+        weightsBatchIdx=0
         lastWts  =  self.weights[1]
         
         lastWtsFlat = np.zeros(shape=(lastWts.shape[0] * lastWts.shape[1]),dtype=lastWts.dtype)
@@ -144,25 +146,13 @@ class MyNeuralNetwork:
             
         derivativesLastLayer = np.zeros( shape=lastWtsFlat.shape,dtype=lastWts.dtype )
         derivativesLastLayer[start : start + lastWts.shape[1] ] = derivativesLastLayerByBatch[:]
-        
-        #print(derivativesLastLayer)
-        #print(lastWtsFlat)
-
-        #derivativesLastLayer = derivativesLastLayerByBatch
-        #lastWtsFlat = lastWts[weightsBatchIdx]
-        
+                
         for derLastLayer,w in zip(derivativesLastLayer,lastWtsFlat):
           for xN in x: 
               der = w * xN * derLastLayer
               derivatives.append(der)
         derivatives.extend(derivativesLastLayer)
-        fmtedDers = ['%.5f' % (d) for d in derivatives]
-        print(fmtedDers)
-        newWeights = self.weights_flattened()
-        for i in range(len(newWeights)):
-            der = derivatives[i]
-            newWeights[i] = newWeights[i] - (lr * der)
-        self.weights = self.weights_unflattened(newWeights)
+        self.apply_derivatives(lr,derivatives)
         
 
     
@@ -171,59 +161,96 @@ class MyNeuralNetwork:
         for i in range(epochs): 
             for x,y in zip(self.x_train,self.y_train):
                 out,hidden_neuron_outputs = self.forward(x,doLog=False,doRetHiddenNeuronOutputs=True)
-                
-                if self.output_layer_size==1:
-                   err = self.mseLoss(y,out)
-                   print('err %.5f out %s' % (err,out))
+                err = self.mseLoss(y,out)
+                self.log('err %.5f' % (err))
+                self.log(f'out {out}')
+                if self.output_layer_size==1:   
                    nn.backward(x,y,out,lr=lr,hidden_neuron_outputs = hidden_neuron_outputs)  
                 else: 
-                   j = 0 
-                   for yN,outputN in zip(y,out):
-                       nn.backward(x,yN,outputN,lr=lr,hidden_neuron_outputs=hidden_neuron_outputs,weightsBatchIdx=j)    
-                       j += 1
+                   nn.backward2(x,y,out,lr=lr,hidden_neuron_outputs = hidden_neuron_outputs)    
                 if sanityCheck:
                     break       
         print('trained epochs %d' % (i))      
 
+    def backward2(self,x,y,output,lr=0.001,hidden_neuron_outputs=None):
+        derivativesLastLayer = []
+        deltasLastLayer = []
+        for expectedN,outN in zip(y,output):
+            delta = (-(expectedN - outN)) * (outN * (1 - outN) )
+            for houtN in hidden_neuron_outputs:
+               der = delta * houtN 
+               derivativesLastLayer.append(der)
+            deltasLastLayer.append(delta)
+            lastWts = self.weights[1]      
+        derivativesFirstLayer = []
+        print(deltasLastLayer)
+        print(hidden_neuron_outputs)
+        for wts,houtN in zip(lastWts.T,hidden_neuron_outputs): 
+            soma = 0
+            for w,delta in zip(wts,deltasLastLayer):
+                soma += delta * w 
+            for xN in x:
+                #print('soma %.5f %.5f %.5f' % (soma,(houtN * (1-houtN)),xN) )
+                der = soma * (houtN * (1-houtN)) * xN
+                derivativesFirstLayer.append(der)    
+        derivatives = []
+        derivatives.extend(derivativesFirstLayer)
+        derivatives.extend(derivativesLastLayer) 
+        print(derivatives)
+        self.apply_derivatives(lr,derivatives)
+    
 
+    def apply_derivatives(self,lr,derivatives):
+        newWeights = self.weights_flattened()
+        for i in range(len(newWeights)):
+            der = derivatives[i]
+            newWeights[i] = newWeights[i] - (lr * der)
+        self.weights = self.weights_unflattened(newWeights)        
     def neuron_output(self,x,wBacth,bias):
         result = 0
         if type(x) != np.ndarray: 
             result += x * wBacth + bias 
         else:    
             for i in np.arange(x.shape[0]):
-                result += x[i] * wBacth[i] + bias
+                result += x[i] * wBacth[i] 
+            result = result + bias    
         return self.sigmoid(result)
          
 if __name__ == '__main__':
 
-    model_f_name = './datasets/my_nn00.pk'
+    model_f_name = './datasets/my_nn000.pk'
     inpt_sz = 2
     hidden_sz = 2
+    '''
+    
     outpt_sz = 1
     x_train = np.array([[0.1,0.3]])
     y_train = np.array([1])
     
     '''
     outpt_sz = 2
-    x_train = np.array([[200,255],[100,150],[0,50],[201,250]])
-    x_train = x_train /255
+    x_train = np.array([[0.05,0.1]])
+    #x_train = x_train /255
     sz = 2 
-    y_train = [hot_encode_vect(sz,0),hot_encode_vect(sz,1),hot_encode_vect(sz,1),hot_encode_vect(sz,0)]
-    '''
+    y_train = [[0.01,0.99]]
+    
     print('1 - train and evaluate\n2 - load and evaluate') 
     nn = MyNeuralNetwork(inpt_sz,hidden_sz,outpt_sz,model_f_name,True)
     nn.fit(x_train,y_train)
     nn.try_load()
+    w1 = np.array([[0.15,0.2],[0.25,0.3]])
+    w2 = np.array([[0.4,0.45],[0.5,0.55]])
+    nn.weights = [w1,w2]
+    nn.biases = np.array([0.35,0.35,0.6,0.6])
     v = input()    
     if v == '1':          
         print('training')
-        print(nn.weights)
-        nn.train()            
-        print('Save model ? 1=Y,2=N')
-        inp = input()
-        if inp=='1':
-            nn.save()
+        #print(nn.weights)
+        nn.train(epochs=1,lr=0.5,sanityCheck=False)            
+        #print('Save model ? 1=Y,2=N')
+        #inp = input()
+        #if inp=='1':
+        #    nn.save()
     elif v == '2':       
         out = nn.forward(x_train[0],doLog=False)
         print(f'out {out}')
