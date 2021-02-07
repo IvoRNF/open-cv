@@ -185,11 +185,11 @@ class MyNeuralNetwork:
         derivativesFirstLayer = []
         print(deltasLastLayer)
         print(hidden_neuron_outputs)
-        for wts,houtN in zip(lastWts.T,hidden_neuron_outputs): 
+        for wts,xN in zip(lastWts.T,x): 
             soma = 0
             for w,delta in zip(wts,deltasLastLayer):
                 soma += delta * w 
-            for xN in x:
+            for houtN in hidden_neuron_outputs:
                 #print('soma %.5f %.5f %.5f' % (soma,(houtN * (1-houtN)),xN) )
                 der = soma * (houtN * (1-houtN)) * xN
                 derivativesFirstLayer.append(der)    
@@ -246,7 +246,7 @@ if __name__ == '__main__':
     if v == '1':          
         print('training')
         #print(nn.weights)
-        nn.train(epochs=1,lr=0.5,sanityCheck=False)            
+        nn.train(epochs=2000,lr=0.5,sanityCheck=False)            
         #print('Save model ? 1=Y,2=N')
         #inp = input()
         #if inp=='1':
