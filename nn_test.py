@@ -44,12 +44,13 @@ class MyNeuralNetwork:
     
         
     def forward(self,inpt,doLog=False,doRetHiddenNeuronOutputs=False):
-        y = inpt
+        y = np.array([])
         oldDoLog = self.logging
         self.logging = doLog
         j = 0
-        hidden_neuron_outputs = []
+        hidden_neuron_outputs = np.array([])
         firstLayerIdx = 0
+        lastLayerIdx = 1
         self.log('%s %s'%('1.start forward',y))
         for i in range(len(self.weights)):
             layerConnWts = self.weights[i]
@@ -57,13 +58,11 @@ class MyNeuralNetwork:
                 w = wtsBatch
                 b = self.biases[j]
                 j+=1  
-                if doRetHiddenNeuronOutputs and (i==firstLayerIdx):
-                    hidden_neuron_outputs.append(nn.neuron_output(inpt,wtsBatch,b))  
-                y = np.dot(y,w)
-                y = y + b 
-                self.log('%s %s'%('2.dot',y))            
-            y = self.sigmoid(y)    
-            self.log('%s %s'%('3.sigmoid',y))
+                if (i==firstLayerIdx):
+                    nout = nn.neuron_output(inpt,wtsBatch,b)
+                    hidden_neuron_outputs = np.append(hidden_neuron_outputs,nout)
+                else:
+                   y = np.append(y, nn.neuron_output(hidden_neuron_outputs,wtsBatch,b)  )              
         self.logging = oldDoLog
         if doRetHiddenNeuronOutputs:
             return y,hidden_neuron_outputs
@@ -167,7 +166,8 @@ class MyNeuralNetwork:
                 if self.output_layer_size==1:   
                    nn.backward(x,y,out,lr=lr,hidden_neuron_outputs = hidden_neuron_outputs)  
                 else: 
-                   nn.backward2(x,y,out,lr=lr,hidden_neuron_outputs = hidden_neuron_outputs)    
+                   nn.backward2(x,y,out,lr=lr,hidden_neuron_outputs = hidden_neuron_outputs) 
+                   print(self.weights)   
                 if sanityCheck:
                     break       
         print('trained epochs %d' % (i))      
@@ -181,21 +181,18 @@ class MyNeuralNetwork:
                der = delta * houtN 
                derivativesLastLayer.append(der)
             deltasLastLayer.append(delta)
-            lastWts = self.weights[1]      
+        lastWts = self.weights[1]      
         derivativesFirstLayer = []
-        print(deltasLastLayer)
         for wts,houtN in zip(lastWts.T,hidden_neuron_outputs): 
             soma = 0
             for w,delta in zip(wts,deltasLastLayer):
                 soma += delta * w 
             for xN in x:
-                #print('soma %.5f %.5f %.5f' % (soma,(houtN * (1-houtN)),xN) )
                 der = soma * (houtN * (1-houtN)) * xN
                 derivativesFirstLayer.append(der)    
         derivatives = []
         derivatives.extend(derivativesFirstLayer)
         derivatives.extend(derivativesLastLayer) 
-        print(derivatives)
         self.apply_derivatives(lr,derivatives)
     
 
@@ -207,12 +204,8 @@ class MyNeuralNetwork:
         self.weights = self.weights_unflattened(newWeights)        
     def neuron_output(self,x,wBacth,bias):
         result = 0
-        if type(x) != np.ndarray: 
-            result += x * wBacth + bias 
-        else:    
-            for i in np.arange(x.shape[0]):
-                result += x[i] * wBacth[i] 
-            result = result + bias    
+        for i in np.arange(x.shape[0]):
+                result += x[i] * wBacth[i] + bias   
         return self.sigmoid(result)
          
 if __name__ == '__main__':
@@ -229,7 +222,6 @@ if __name__ == '__main__':
     '''
     outpt_sz = 2
     x_train = np.array([[0.05,0.1]])
-    #x_train = x_train /255
     sz = 2 
     y_train = [[0.01,0.99]]
     
@@ -237,27 +229,17 @@ if __name__ == '__main__':
     nn = MyNeuralNetwork(inpt_sz,hidden_sz,outpt_sz,model_f_name,True)
     nn.fit(x_train,y_train)
     nn.try_load()
-    w1 = np.array([[0.15,0.2],[0.25,0.3]])
-    w2 = np.array([[0.4,0.45],[0.5,0.55]])
-    nn.weights = [w1,w2]
-    nn.biases = np.array([0.35,0.35,0.6,0.6])
     v = input()    
     if v == '1':          
         print('training')
-        #print(nn.weights)
-        nn.train(epochs=1,lr=0.5,sanityCheck=False)            
-        #print('Save model ? 1=Y,2=N')
-        #inp = input()
-        #if inp=='1':
-        #    nn.save()
+        nn.train(epochs=1000 * 10  ,lr=0.5,sanityCheck=False)            
+        print('Save model ? 1=Y,2=N')
+        inp = input()
+        if inp=='1':
+            nn.save()
     elif v == '2':       
         out = nn.forward(x_train[0],doLog=False)
         print(f'out {out}')
-        '''
-        print('out %s predicted %d expected %d' % (out,np.argmax(out),np.argmax(y_train[1])  ))   
-        out = nn.forward(x_train[1],doLog=False)
-        print('out %s predicted %d expected %d' % (out,np.argmax(out),np.argmax(y_train[0])))  
-        '''
         err = nn.mseLoss(y_train[0],out)
         print('err %.5f' % (err))
         
