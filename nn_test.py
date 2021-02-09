@@ -1,8 +1,6 @@
 import numpy as np 
 import pickle 
 import os
-from feature import hot_encode_vect
-
 
 class MyNeuralNetwork:
 
@@ -64,6 +62,9 @@ class MyNeuralNetwork:
                 else:
                    y = np.append(y, nn.neuron_output(hidden_neuron_outputs,wtsBatch,b)  )              
         self.logging = oldDoLog
+
+        if self.output_layer_size==1:
+            y = y[0]
         if doRetHiddenNeuronOutputs:
             return y,hidden_neuron_outputs
         return y 
@@ -93,8 +94,9 @@ class MyNeuralNetwork:
         for x,y in zip(self.x_train,self.y_train): 
             arr = self.forward(x)
             label = np.argmax(arr)
+            y_label = np.argmax(y)
             probs.append(arr)
-            if(label == y):    
+            if(label == y_label):    
                 c_correct.append(1)
                 prob = arr[label]
                 if prob > 0: 
@@ -210,20 +212,13 @@ class MyNeuralNetwork:
          
 if __name__ == '__main__':
 
-    model_f_name = './datasets/my_nn000.pk'
+    model_f_name = './datasets/my_nn_.pk'
     inpt_sz = 2
     hidden_sz = 2
-    '''
-    
-    outpt_sz = 1
-    x_train = np.array([[0.1,0.3]])
-    y_train = np.array([1])
-    
-    '''
     outpt_sz = 2
-    x_train = np.array([[0.05,0.1]])
-    sz = 2 
-    y_train = [[0.01,0.99]]
+
+    x_train = np.array([[0.05,0.1],[0.7,0.99]])
+    y_train = np.array([[0.01,0.99],[0.99,0]])
     
     print('1 - train and evaluate\n2 - load and evaluate') 
     nn = MyNeuralNetwork(inpt_sz,hidden_sz,outpt_sz,model_f_name,True)
@@ -232,16 +227,20 @@ if __name__ == '__main__':
     v = input()    
     if v == '1':          
         print('training')
-        nn.train(epochs=1000 * 10  ,lr=0.5,sanityCheck=False)            
+        nn.train(epochs=1000 * 10,lr=0.5,sanityCheck=False)            
         print('Save model ? 1=Y,2=N')
         inp = input()
         if inp=='1':
             nn.save()
-    elif v == '2':       
-        out = nn.forward(x_train[0],doLog=False)
-        print(f'out {out}')
-        err = nn.mseLoss(y_train[0],out)
-        print('err %.5f' % (err))
+    elif v == '2':
+        if outpt_sz==1:
+           outpt = nn.forward(x_train[0])
+           y = y_train[0]
+           err = nn.mseLoss(y,outpt)
+           print(f'{outpt}, expected  {y},err {err}')       
+        else: 
+           stats = nn.eval_model(ret_stats=True)
+           print(stats)
         
        
         
