@@ -29,7 +29,10 @@ def circular_center_points(frame):
         x = middle_w + radius * math.cos(degree * math.pi/180)
         y = middle_h + radius * math.sin(degree * math.pi/180)
         yield (round(y),round(x))
-
+def display(img):
+     cv2.imshow('',img)
+     cv2.waitKey()
+     cv2.destroyAllWindows()
 
 class OpenCvTests:
 
