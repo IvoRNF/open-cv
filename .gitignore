@@ -24,3 +24,4 @@ my_knnB_.xml
 object_detector_bow_svm.py
 my_svm.xml
 emnist
+Emnist_model.pt
