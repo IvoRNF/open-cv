@@ -8,12 +8,15 @@ from util import display
 import numpy as np
 from sklearn.model_selection import train_test_split
 from torchvision import transforms
+import os
 
 class EmnistNN(nn.Module):
 
     def __init__(self):
         super().__init__()
         self.root_dir = './emnist'
+        self.modelfname = './Emnist_model.pt'
+        
         self.batch_size = 16
         self.test_sz = 0.15
         self.load_dataset()
@@ -24,15 +27,15 @@ class EmnistNN(nn.Module):
         self.linear1_in_features = 50 * 4 * 4
 
         self.fc1 = nn.Linear(in_features=self.linear1_in_features,out_features=500)
-        self.fc2 = nn.Linear(in_features=500,out_features=self.target_sz)
+        self.fc2 = nn.Linear(in_features=500,out_features=10 )
 
         self.loss_func = nn.MSELoss(reduction='sum') 
         self.opt = optim.SGD(self.parameters(),lr=1e-4)
-        
+        self.try_load() 
     def forward(self,x_):
 
-        x = torch.unsqueeze(x_,dim=1)
-        x = x.float()
+        #x = torch.unsqueeze(x_,dim=1)
+        x = x_.float()
         x = self.conv1(x)
         x = nnfunc.relu(x)
         x = nnfunc.max_pool2d(x,2,2)
@@ -52,10 +55,16 @@ class EmnistNN(nn.Module):
         if i=='1':
            self.show_sample()
         elif i=='2':
-           imgs = self.dataset.data[0:1]
-           print(self(imgs).detach().numpy().astype(np.float32))
+           self.trainning_loop()
+    def prepare_yb(self,yb):
+        arr = yb.numpy()
+        result = np.zeros(shape=(arr.shape[0],self.target_sz),dtype=np.float32)
+        for i in np.arange(len(arr)):
+            result[i][arr[i]] = arr[i]
+        result = torch.tensor(result)
+        return result
     def load_dataset(self):
-        self.dataset = datasets.EMNIST(root=self.root_dir,split='byclass',download=True,transform=transforms.Compose(transforms.ToTensor()))
+        self.dataset = datasets.EMNIST(root=self.root_dir,split='digits',download=True,transform=transforms.Compose([transforms.ToTensor()]))
         train_idxs, test_idxs = train_test_split(list(range(len(self.dataset))), test_size=self.test_sz,shuffle=True)
     
         self.test_ds = Subset(self.dataset,test_idxs)
@@ -63,10 +72,27 @@ class EmnistNN(nn.Module):
         self.train_dl = DataLoader(self.train_ds,batch_size=self.batch_size)
         self.test_dl = DataLoader(self.test_ds,batch_size=self.batch_size)
         print('total_sz = %d ,test_sz = %d , train_sz = %d' % (len(self.dataset),len(self.test_ds) ,len(self.train_ds)))
-        
     def show_sample(self):
         imgs = self.dataset.data[0:10].numpy()        
         display(np.concatenate(imgs))
+    def try_load(self):
+        if os.path.exists(self.modelfname):
+           self.load_state_dict(torch.load(self.modelfname)) 
+           print('loaded model from file %s' % (self.modelfname))
+    def trainning_loop(self,epochs=1):
+        for epoch in np.arange(epochs):
+            self.train()
+            for xb,yb in self.train_dl:
+                out = self(xb)
+                yb = self.prepare_yb(yb)
+                loss = self.loss_func(out,yb)
+                loss.backward() #compute the gradients
+                self.opt.step() #update the weights
+                self.opt.zero_grad() #clear the gradients of batch
+                print('training epoch %d,loss %.2f' % (epoch,loss.item())) 
+        print('saving the model...')  
+        torch.save(self.state_dict(),self.modelfname)         
+        print('saved.')
 if __name__=='__main__':
     model = EmnistNN()
     model.start()
