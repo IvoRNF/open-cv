@@ -60,11 +60,12 @@ class EmnistNN(nn.Module):
         arr = yb.numpy()
         result = np.zeros(shape=(arr.shape[0],self.target_sz),dtype=np.float32)
         for i in np.arange(len(arr)):
-            result[i][arr[i]] = arr[i]
+            result[i][arr[i]] = 1#arr[i]
         result = torch.tensor(result)
         return result
     def load_dataset(self):
-        self.dataset = datasets.EMNIST(root=self.root_dir,split='digits',download=True,transform=transforms.Compose([transforms.ToTensor()]))
+        transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.5), (0.5))])
+        self.dataset = datasets.EMNIST(root=self.root_dir,split='digits',download=True,transform=transform)
         train_idxs, test_idxs = train_test_split(list(range(len(self.dataset))), test_size=self.test_sz,shuffle=True)
     
         self.test_ds = Subset(self.dataset,test_idxs)
