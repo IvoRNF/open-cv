@@ -51,26 +51,19 @@ def rotate_line():
     img = np.zeros(shape=(w,h))
     img[:] = 255
     start_p = [int(w/2),int(h/2)]
-    print(start_p)
     cv2.namedWindow(name)
     end_p = [w,int(h / 2)]
-    degr = 90    
+   
     while(True):
-         
-        cv2.line(img,tuple(start_p),tuple(end_p),(0,255,0),4)
+        cv2.line(img,tuple(start_p),tuple(end_p),(0,255,0),3)
         cv2.imshow(name,img)
-        key = cv2.waitKey(0)
+        key = cv2.waitKey(500)
         if key == ord('q'):
             break
         elif key == ord('r'):
-          img[:] = 255
-          degr += 10
-          vect_ = np.array(end_p) - np.array(start_p)
-          len_ = np.sqrt( np.dot(vect_.T,vect_) )
-          vect_ = vect_ / len_
-          end_p = list( ((rotate_vect(vect_,degr) * len_) + np.array(start_p)).astype(np.int32) )
-          if degr==360:
-             degr = 0
+          img[:] = 255      
+          vect_ = np.array(end_p)         
+          end_p = list( ( rotate_vect(vect_,15)  ).astype(np.int32) )    
     cv2.destroyAllWindows()
     
 if __name__ == '__main__':
