@@ -33,8 +33,6 @@ class EmnistNN(nn.Module):
         self.opt = optim.SGD(self.parameters(),lr=1e-4)
         self.try_load() 
     def forward(self,x_):
-
-        #x = torch.unsqueeze(x_,dim=1)
         x = x_.float()
         x = self.conv1(x)
         x = nnfunc.relu(x)
@@ -50,17 +48,37 @@ class EmnistNN(nn.Module):
     def start(self):
         print('1 - show sample')
         print('2 - train')
-
+        print('3 - evaluate')  
         i = input()
         if i=='1':
            self.show_sample()
         elif i=='2':
            self.trainning_loop()
+        elif i=='3':
+           self.evaluate_acc()
+    def evaluate_acc(self):
+        true_positive_ct = 0
+        samples_ct = len(self.test_ds)
+        print('evaluating ...')
+            
+        for xb,yb in self.test_dl:
+            y_ = self(xb)
+            yb = self.prepare_yb(yb)
+            for y_expected,y_predicted in zip(yb,y_):
+                y_predicted_ = y_predicted.detach().numpy()
+                idx = np.argmax(y_predicted_,axis=0)
+                if y_expected[idx]==1:
+                   true_positive_ct += 1
+            
+        print('test samples count %d ' % (samples_ct))
+        print( 'model accuracy {:.2f}'.format(true_positive_ct / samples_ct) )
+        print('true positives count %d ' % (true_positive_ct))
+                
     def prepare_yb(self,yb):
         arr = yb.numpy()
         result = np.zeros(shape=(arr.shape[0],self.target_sz),dtype=np.float32)
         for i in np.arange(len(arr)):
-            result[i][arr[i]] = 1#arr[i]
+            result[i][arr[i]] = 1
         result = torch.tensor(result)
         return result
     def load_dataset(self):
