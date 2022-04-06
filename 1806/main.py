@@ -1,7 +1,9 @@
 import numpy as np
 import cv2
 
-''' solving diferential equations MIT 1806 course
+'''  MIT 1806 course '''
+
+''' solving diferential equations 
   example 
   u0 = np.array([4,2])
 
@@ -29,6 +31,25 @@ def diff_solution(A ,u0, t = 0,scal_eig_v=0):
        result += (C[i] * (np.e ** (eigen_values[i] *t))) * eigen_vectors[i]            
     return result
 
+'''
+  returns  array of projections matrices 
+  if matrix is symetric , the sum of these projections equals input A
+'''
+
+def projections_matrices(A,eigen_values,eigen_vectors):
+    
+    shape = (len(eigen_values),*eigen_vectors.shape)
+    result = np.zeros(shape=shape,dtype=np.float32)
+    for i in np.arange(len(eigen_values)):
+        vl = eigen_values[i]
+        vect = np.array([[*eigen_vectors[i]]])
+        len_ = np.sqrt(np.dot(vect,vect.T)[0][0])
+        vect = vect / len_
+        matrix = ((vect * vl) * vect.T) 
+        result[i] = matrix
+    return result    
+        
+    
 
 def degrees_to_radians(degrees):
     return degrees * np.pi / 180
@@ -67,5 +88,21 @@ def rotate_line():
     cv2.destroyAllWindows()
     
 if __name__ == '__main__':
-   rotate_line()
+   
+   A = np.array([[3,1],
+                [1,3]])
+   vects = np.array([[1,1],[1,-1]])
+   vls = np.array([4,2])
+   matrices = projections_matrices(A,vls,vects)
+   #print(matrices)
+   print(matrices[0] + matrices[1])
     
+   B = np.array([[9,12],
+                 [12,16]])
+   vects = np.array([[4/3,-1],
+                     [1,4/3]])
+   vls = np.array([0,25])
+   matrices = projections_matrices(B,vls,vects)
+   #print(matrices)
+   print(matrices[0] + matrices[1])
+   
