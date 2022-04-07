@@ -98,8 +98,11 @@ class EmnistNN(nn.Module):
         if os.path.exists(self.modelfname):
            self.load_state_dict(torch.load(self.modelfname)) 
            print('loaded model from file %s' % (self.modelfname))
-    def trainning_loop(self,epochs=1):
+    def trainning_loop(self,epochs=1,break_at_loss=5):
+        has_breaked = False
         for epoch in np.arange(epochs):
+            if has_breaked:
+              break
             self.train()
             for xb,yb in self.train_dl:
                 out = self(xb)
@@ -108,7 +111,13 @@ class EmnistNN(nn.Module):
                 loss.backward() #compute the gradients
                 self.opt.step() #update the weights
                 self.opt.zero_grad() #clear the gradients of batch
-                print('training epoch %d,loss %.2f' % (epoch,loss.item())) 
+                loss_ = loss.item()
+                if int(loss_ * 100) <= break_at_loss:
+                   print('breaking training at loss = %.2f' % (loss_))
+                   has_breaked = True 
+                   break
+                   
+                print('training epoch %d,loss %.2f' % (epoch,loss_)) 
         print('saving the model...')  
         torch.save(self.state_dict(),self.modelfname)         
         print('saved.')
