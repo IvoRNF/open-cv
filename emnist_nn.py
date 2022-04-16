@@ -9,6 +9,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from torchvision import transforms
 import os
+import cv2
 
 class EmnistNN(nn.Module):
 
@@ -84,12 +85,7 @@ class EmnistNN(nn.Module):
     def load_dataset(self):
         transform = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.5), (0.5))])
         self.dataset = datasets.EMNIST(root=self.root_dir,split='digits',download=True,transform=transform)
-        train_idxs, test_idxs = train_test_split(list(range(len(self.dataset))), test_size=self.test_sz,shuffle=True)
-    
-        self.test_ds = Subset(self.dataset,test_idxs)
-        self.train_ds = Subset(self.dataset,train_idxs)
-        self.train_dl = DataLoader(self.train_ds,batch_size=self.batch_size)
-        self.test_dl = DataLoader(self.test_ds,batch_size=self.batch_size)
+        self.split_dataset(self.test_sz)
         print('total_sz = %d ,test_sz = %d , train_sz = %d' % (len(self.dataset),len(self.test_ds) ,len(self.train_ds)))
     def show_sample(self):
         imgs = self.dataset.data[0:10].numpy()        
@@ -121,6 +117,36 @@ class EmnistNN(nn.Module):
         print('saving the model...')  
         torch.save(self.state_dict(),self.modelfname)         
         print('saved.')
+    def split_dataset(self,test_sz_,train_sz_=None):
+        train_idxs, test_idxs = train_test_split(list(range(len(self.dataset))), test_size=test_sz_,train_size=train_sz_,shuffle=True)
+    
+        self.test_ds = Subset(self.dataset,test_idxs)
+        self.train_ds = Subset(self.dataset,train_idxs)
+        self.train_dl = DataLoader(self.train_ds,batch_size=self.batch_size)
+        self.test_dl = DataLoader(self.test_ds,batch_size=self.batch_size)
+   
+
+
+    def save_subset(self,test_size_ = 0.3,train_size_=0.3):
+        self.split_dataset(test_size_,train_size_)
+        print('dataloader sz') 
+        print(len(self.train_dl))
+        i = 0
+        for xb,yb in self.train_dl:
+              print(xb.shape)
+              print(yb.shape)
+              for x,y in zip(xb,yb):
+                img = x[0].numpy()
+                fname = r'C:\Users\Ivo Ribeiro\Documents\open-cv\%d\%d.jpg' % (y,i)
+                print(fname) 
+                print(img.shape) 
+                cv2.imwrite(fname,img)
+                i+= 1
+                break
+              break  
+
+        
 if __name__=='__main__':
     model = EmnistNN()
-    model.start()
+    #model.start()
+    model.save_subset()
